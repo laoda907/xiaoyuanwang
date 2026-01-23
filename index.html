@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>校园网 - 登录</title>
     <link rel="stylesheet" href="css/style.css">
-    <!-- 引入 Firebase 兼容版 SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <!-- 使用稳定版 Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
     <div class="auth-container">
@@ -35,6 +35,16 @@
     </div>
 
     <script>
+        // 全局错误捕获，确保能看到任何初始化错误
+        window.addEventListener('error', function(event) {
+            console.error('全局错误捕获:', event.error);
+            const msgDiv = document.getElementById('message');
+            if (msgDiv && event.error) {
+                msgDiv.textContent = '加载错误: ' + (event.error.message || '未知错误');
+                msgDiv.className = 'message error';
+            }
+        });
+
         // ========== Firebase 配置（已填入你的项目信息）==========
         const firebaseConfig = {
             apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
@@ -47,77 +57,34 @@
         // ========== 配置结束 ==========
 
         // 初始化 Firebase
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const database = firebase.database();
+        let auth, database;
+        try {
+            firebase.initializeApp(firebaseConfig);
+            auth = firebase.auth();
+            database = firebase.database();
+            console.log('Firebase 初始化成功');
+        } catch (error) {
+            console.error('Firebase 初始化失败:', error);
+            showMessage('系统初始化失败: ' + error.message, 'error');
+        }
 
         // 切换登录/注册表单
         function showRegister() {
             document.getElementById('loginForm').style.display = 'none';
             document.getElementById('registerForm').style.display = 'block';
-            document.getElementById('message').textContent = '';
+            clearMessage();
         }
         function showLogin() {
             document.getElementById('registerForm').style.display = 'none';
             document.getElementById('loginForm').style.display = 'block';
-            document.getElementById('message').textContent = '';
+            clearMessage();
         }
 
-        // 注册函数
-        async function register() {
-            const name = document.getElementById('registerName').value.trim();
-            const password = document.getElementById('registerPassword').value;
-
-            if (name.length < 1 || name.length > 8) {
-                showMessage('名字长度需为1-8个字！', 'error');
-                return;
-            }
-            if (password.length < 6) {
-                showMessage('密码至少需要6位！', 'error');
-                return;
-            }
-
-            // 1. 检查用户名是否已存在
-            const nameSnapshot = await database.ref('usernames').child(name).once('value');
-            if (nameSnapshot.exists()) {
-                showMessage('这个名字已经被使用了，请换一个吧！', 'error');
-                return;
-            }
-
-            // 2. 用“名字@xiaoyuanwang.com”模拟邮箱进行注册
-            const email = name + '@xiaoyuanwang.com';
-            try {
-                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-                const user = userCredential.user;
-
-                // 3. 在数据库记录此用户名已被占用
-                await database.ref('usernames').child(name).set(user.uid);
-                // 4. 存储用户个人信息
-                await database.ref('users').child(user.uid).set({
-                    name: name,
-                    createdAt: firebase.database.ServerValue.TIMESTAMP
-                });
-
-                showMessage('注册成功！正在为你登录...', 'success');
-                setTimeout(() => { window.location.href = 'main.html'; }, 1500);
-            } catch (error) {
-                showMessage('注册失败: ' + error.message, 'error');
-            }
-        }
-
-        // 登录函数
-        async function login() {
-            const name = document.getElementById('loginName').value.trim();
-            const password = document.getElementById('loginPassword').value;
-
-            const email = name + '@xiaoyuanwang.com'; // 同样规则构造邮箱
-            try {
-                await auth.signInWithEmailAndPassword(email, password);
-                showMessage('登录成功，正在进入...', 'success');
-                setTimeout(() => { window.location.href = 'main.html'; }, 1000);
-            } catch (error) {
-                showMessage('登录失败: 名字或密码错误', 'error');
-            }
+        // 清除提示信息
+        function clearMessage() {
+            const msgDiv = document.getElementById('message');
+            msgDiv.textContent = '';
+            msgDiv.className = 'message';
         }
 
         // 显示提示信息
@@ -125,14 +92,135 @@
             const msgDiv = document.getElementById('message');
             msgDiv.textContent = text;
             msgDiv.className = 'message ' + type;
+            console.log('消息:', type, text);
         }
 
-        // 检查是否已登录，若已登录则跳转
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                window.location.href = 'main.html';
+        // 注册函数
+        async function register() {
+            // 防止重复点击
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '注册中...';
+
+            const name = document.getElementById('registerName').value.trim();
+            const password = document.getElementById('registerPassword').value;
+
+            // 清空之前的信息
+            clearMessage();
+
+            // 前端验证
+            if (name.length < 1 || name.length > 8) {
+                showMessage('名字长度需为1-8个字！', 'error');
+                btn.disabled = false;
+                btn.textContent = '注册';
+                return;
             }
-        });
+            if (password.length < 6) {
+                showMessage('密码至少需要6位！', 'error');
+                btn.disabled = false;
+                btn.textContent = '注册';
+                return;
+            }
+
+            try {
+                // 1. 检查用户名是否已存在
+                showMessage('正在检查用户名...', '');
+                const nameSnapshot = await database.ref('usernames').child(name).once('value');
+                if (nameSnapshot.exists()) {
+                    showMessage('这个名字已经被使用了，请换一个吧！', 'error');
+                    btn.disabled = false;
+                    btn.textContent = '注册';
+                    return;
+                }
+
+                // 2. 创建用户（用“名字@xiaoyuanwang.com”模拟邮箱）
+                showMessage('正在创建账号...', '');
+                const email = name + '@xiaoyuanwang.com';
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+
+                // 3. 保存用户名和用户信息到数据库
+                showMessage('正在保存信息...', '');
+                await database.ref('usernames').child(name).set(user.uid);
+                await database.ref('users').child(user.uid).set({
+                    name: name,
+                    createdAt: firebase.database.ServerValue.TIMESTAMP
+                });
+
+                // 4. 注册成功
+                showMessage('注册成功！正在为你登录...', 'success');
+                console.log('用户注册成功:', user.uid, name);
+                
+                // 1.5秒后跳转到主页面
+                setTimeout(() => {
+                    window.location.href = 'main.html';
+                }, 1500);
+                
+            } catch (error) {
+                // 详细错误处理
+                console.error('注册详细错误:', error.code, error.message, error);
+                
+                let errorMsg = '注册失败: ';
+                if (error.code === 'auth/email-already-in-use') {
+                    errorMsg = '该用户名已被注册！';
+                } else if (error.code === 'auth/network-request-failed') {
+                    errorMsg = '网络错误，请检查网络连接';
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMsg = '用户名格式无效';
+                } else if (error.code === 'auth/weak-password') {
+                    errorMsg = '密码强度不足，请使用更复杂的密码';
+                } else {
+                    errorMsg += error.message || '未知错误';
+                }
+                
+                showMessage(errorMsg, 'error');
+                btn.disabled = false;
+                btn.textContent = '注册';
+            }
+        }
+
+        // 登录函数
+        async function login() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '登录中...';
+
+            const name = document.getElementById('loginName').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            clearMessage();
+
+            if (!name || !password) {
+                showMessage('请输入名字和密码', 'error');
+                btn.disabled = false;
+                btn.textContent = '进入校园';
+                return;
+            }
+
+            const email = name + '@xiaoyuanwang.com';
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+                showMessage('登录成功，正在进入...', 'success');
+                setTimeout(() => {
+                    window.location.href = 'main.html';
+                }, 1000);
+            } catch (error) {
+                console.error('登录错误:', error);
+                showMessage('登录失败: 名字或密码错误', 'error');
+                btn.disabled = false;
+                btn.textContent = '进入校园';
+            }
+        }
+
+        // 检查是否已登录，若已登录则自动跳转
+        if (auth) {
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    console.log('用户已登录，自动跳转:', user.uid);
+                    window.location.href = 'main.html';
+                }
+            });
+        }
     </script>
 </body>
 </html>
