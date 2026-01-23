@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校园网 - 登录</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- 引入 Firebase 兼容版 SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+</head>
+<body>
+    <div class="auth-container">
+        <h1>🏫 校园网</h1>
+        <p class="subtitle">连接每一个校园角落</p>
+
+        <div class="form-container" id="loginForm">
+            <h2>登录</h2>
+            <input type="text" id="loginName" placeholder="你的名字" maxlength="8">
+            <input type="password" id="loginPassword" placeholder="密码">
+            <button onclick="login()">进入校园</button>
+            <p class="switch-text">还没有账号？ <a href="#" onclick="showRegister()">点此注册</a></p>
+        </div>
+
+        <div class="form-container" id="registerForm" style="display:none;">
+            <h2>注册新账号</h2>
+            <input type="text" id="registerName" placeholder="取个名字（最多8字）" maxlength="8">
+            <input type="password" id="registerPassword" placeholder="设置密码">
+            <button onclick="register()">注册</button>
+            <p class="switch-text">已有账号？ <a href="#" onclick="showLogin()">点此登录</a></p>
+        </div>
+
+        <div id="message" class="message"></div>
+    </div>
+
+    <script>
+        // ========== Firebase 配置（已填入你的项目信息）==========
+        const firebaseConfig = {
+            apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
+            authDomain: "laoda907-22511.firebaseapp.com",
+            projectId: "laoda907-22511",
+            storageBucket: "laoda907-22511.firebasestorage.app",
+            messagingSenderId: "176173610464",
+            appId: "1:176173610464:web:3ff86202f9b05f24b36785"
+        };
+        // ========== 配置结束 ==========
+
+        // 初始化 Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+
+        // 切换登录/注册表单
+        function showRegister() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
+            document.getElementById('message').textContent = '';
+        }
+        function showLogin() {
+            document.getElementById('registerForm').style.display = 'none';
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('message').textContent = '';
+        }
+
+        // 注册函数
+        async function register() {
+            const name = document.getElementById('registerName').value.trim();
+            const password = document.getElementById('registerPassword').value;
+
+            if (name.length < 1 || name.length > 8) {
+                showMessage('名字长度需为1-8个字！', 'error');
+                return;
+            }
+            if (password.length < 6) {
+                showMessage('密码至少需要6位！', 'error');
+                return;
+            }
+
+            // 1. 检查用户名是否已存在
+            const nameSnapshot = await database.ref('usernames').child(name).once('value');
+            if (nameSnapshot.exists()) {
+                showMessage('这个名字已经被使用了，请换一个吧！', 'error');
+                return;
+            }
+
+            // 2. 用“名字@xiaoyuanwang.com”模拟邮箱进行注册
+            const email = name + '@xiaoyuanwang.com';
+            try {
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+
+                // 3. 在数据库记录此用户名已被占用
+                await database.ref('usernames').child(name).set(user.uid);
+                // 4. 存储用户个人信息
+                await database.ref('users').child(user.uid).set({
+                    name: name,
+                    createdAt: firebase.database.ServerValue.TIMESTAMP
+                });
+
+                showMessage('注册成功！正在为你登录...', 'success');
+                setTimeout(() => { window.location.href = 'main.html'; }, 1500);
+            } catch (error) {
+                showMessage('注册失败: ' + error.message, 'error');
+            }
+        }
+
+        // 登录函数
+        async function login() {
+            const name = document.getElementById('loginName').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            const email = name + '@xiaoyuanwang.com'; // 同样规则构造邮箱
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+                showMessage('登录成功，正在进入...', 'success');
+                setTimeout(() => { window.location.href = 'main.html'; }, 1000);
+            } catch (error) {
+                showMessage('登录失败: 名字或密码错误', 'error');
+            }
+        }
+
+        // 显示提示信息
+        function showMessage(text, type) {
+            const msgDiv = document.getElementById('message');
+            msgDiv.textContent = text;
+            msgDiv.className = 'message ' + type;
+        }
+
+        // 检查是否已登录，若已登录则跳转
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                window.location.href = 'main.html';
+            }
+        });
+    </script>
+</body>
+</html>
