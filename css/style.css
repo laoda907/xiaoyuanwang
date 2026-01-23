@@ -31,6 +31,9 @@ h1 {
     margin-bottom: 30px;
     font-size: 1.1em;
 }
+.form-container {
+    margin-top: 20px;
+}
 .form-container h2 {
     color: #2d3436;
     margin-bottom: 25px;
@@ -59,10 +62,15 @@ button {
     font-weight: bold;
     cursor: pointer;
     margin-top: 10px;
-    transition: transform 0.2s;
+    transition: all 0.2s;
 }
-button:hover {
+button:hover:not(:disabled) {
     transform: scale(1.02);
+    box-shadow: 0 5px 15px rgba(106, 17, 203, 0.4);
+}
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 .switch-text {
     margin-top: 20px;
@@ -81,6 +89,8 @@ button:hover {
     padding: 12px;
     border-radius: 10px;
     font-weight: bold;
+    min-height: 20px;
+    transition: all 0.3s;
 }
 .message.success {
     background: #d4edda;
