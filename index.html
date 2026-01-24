@@ -1,214 +1,129 @@
-<!DOCTYPE html>
-<html lang="zh">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>校园网 - 登录</title>
-    <link rel="stylesheet" href="css/style.css">
-    <!-- 使用更稳定的 Firebase 7.24.0 版本 -->
-    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-database.js"></script>
-</head>
-<body>
-    <div class="auth-container">
-        <h1>🏫 校园网</h1>
-        <p class="subtitle">连接每一个校园角落</p>
+// ========== 注册功能 ==========
+async function registerUser() {
+    const name = document.getElementById('registerName').value.trim();
+    const password = document.getElementById('registerPassword').value;
+    
+    // 验证
+    if (!name || name.length > 8) {
+        showMessage('名字不能为空且不超过8个字', 'error');
+        return;
+    }
+    if (!password || password.length < 6) {
+        showMessage('密码不能少于6位', 'error');
+        return;
+    }
+    
+    // 检查用户名
+    const snapshot = await database.ref('usernames/' + name).once('value');
+    if (snapshot.exists()) {
+        showMessage('名字已被使用', 'error');
+        return;
+    }
+    
+    // 生成用户ID
+    const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    
+    // 🔐 加密密码
+    const passwordHash = btoa(password + '|' + Date.now()).split('').reverse().join('');
+    
+    // 生成会话令牌
+    const sessionToken = btoa(userId + '|' + Date.now() + '|' + Math.random().toString(36));
+    
+    // 保存到数据库
+    await database.ref('users/' + userId).set({
+        name: name,
+        passwordHash: passwordHash,
+        sessionToken: sessionToken,
+        createdAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString()
+    });
+    
+    // 记录用户名
+    await database.ref('usernames/' + name).set(userId);
+    
+    // 🔒 安全保存会话
+    const sessionData = {
+        userId: userId,
+        userName: name,
+        token: sessionToken,
+        expiry: Date.now() + 7 * 24 * 60 * 60 * 1000
+    };
+    localStorage.setItem('xiaoyuan_session', btoa(JSON.stringify(sessionData)));
+    
+    showMessage('🎉 注册成功！正在跳转...', 'success');
+    setTimeout(() => {
+        window.location.href = 'main.html';
+    }, 1500);
+}
 
-        <div class="form-container" id="loginForm">
-            <h2>登录</h2>
-            <input type="text" id="loginName" placeholder="你的名字" maxlength="8">
-            <input type="password" id="loginPassword" placeholder="密码">
-            <button onclick="loginUser()">进入校园</button>
-            <p class="switch-text">还没有账号？ <a href="#" onclick="showRegister()">点此注册</a></p>
-        </div>
-
-        <div class="form-container" id="registerForm" style="display:none;">
-            <h2>注册新账号</h2>
-            <input type="text" id="registerName" placeholder="取个名字（最多8字）" maxlength="8">
-            <input type="password" id="registerPassword" placeholder="设置密码">
-            <button onclick="registerUser()">注册</button>
-            <p class="switch-text">已有账号？ <a href="#" onclick="showLogin()">点此登录</a></p>
-        </div>
-
-        <div id="message" class="message"></div>
-    </div>
-
-    <script>
-        // ========== 配置文件（你的 Firebase 配置）==========
-        const firebaseConfig = {
-            apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
-            authDomain: "laoda907-22511.firebaseapp.com",
-            databaseURL: "https://laoda907-22511-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "laoda907-22511",
-            storageBucket: "laoda907-22511.firebasestorage.app",
-            messagingSenderId: "176173610464",
-            appId: "1:176173610464:web:3ff86202f9b05f24b36785"
-        };
-        // ========== 配置结束 ==========
-
-        // 初始化 Firebase
-        let auth, database;
-        try {
-            firebase.initializeApp(firebaseConfig);
-            auth = firebase.auth();
-            database = firebase.database();
-            console.log("✅ Firebase 初始化成功");
-        } catch (error) {
-            console.error("❌ Firebase 初始化失败:", error);
-            showMessage("系统初始化失败，请刷新页面重试", "error");
+// ========== 登录功能 ==========
+async function loginUser() {
+    const name = document.getElementById('loginName').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    
+    if (!name || !password) {
+        showMessage('请输入名字和密码', 'error');
+        return;
+    }
+    
+    // 找用户ID
+    const idSnapshot = await database.ref('usernames/' + name).once('value');
+    if (!idSnapshot.exists()) {
+        showMessage('用户不存在', 'error');
+        return;
+    }
+    
+    const userId = idSnapshot.val();
+    
+    // 获取用户数据
+    const userSnapshot = await database.ref('users/' + userId).once('value');
+    const userData = userSnapshot.val();
+    
+    if (!userData) {
+        showMessage('用户数据错误', 'error');
+        return;
+    }
+    
+    // 🔐 验证密码
+    try {
+        const reversedHash = userData.passwordHash.split('').reverse().join('');
+        const decoded = atob(reversedHash);
+        const parts = decoded.split('|');
+        if (parts[0] !== password) {
+            throw new Error('密码不匹配');
         }
+    } catch {
+        showMessage('密码错误', 'error');
+        return;
+    }
+    
+    // 🔑 生成新会话令牌
+    const newSessionToken = btoa(userId + '|' + Date.now() + '|' + Math.random().toString(36));
+    
+    // 更新数据库中的令牌
+    await database.ref('users/' + userId).update({
+        sessionToken: newSessionToken,
+        lastLogin: new Date().toISOString()
+    });
+    
+    // 🔒 保存安全会话
+    const sessionData = {
+        userId: userId,
+        userName: name,
+        token: newSessionToken,
+        expiry: Date.now() + 7 * 24 * 60 * 60 * 1000
+    };
+    localStorage.setItem('xiaoyuan_session', btoa(JSON.stringify(sessionData)));
+    
+    showMessage('✅ 登录成功！', 'success');
+    setTimeout(() => {
+        window.location.href = 'main.html';
+    }, 1000);
+}
 
-        // 切换登录/注册表单
-        function showRegister() {
-            document.getElementById('loginForm').style.display = 'none';
-            document.getElementById('registerForm').style.display = 'block';
-            clearMessage();
-        }
-        function showLogin() {
-            document.getElementById('registerForm').style.display = 'none';
-            document.getElementById('loginForm').style.display = 'block';
-            clearMessage();
-        }
-
-        // 显示/清除消息
-        function showMessage(text, type) {
-            const msgDiv = document.getElementById('message');
-            msgDiv.textContent = text;
-            msgDiv.className = 'message ' + type;
-        }
-        function clearMessage() {
-            showMessage('', '');
-        }
-
-        // ========== 注册功能 ==========
-        async function registerUser() {
-            const btn = document.querySelector('#registerForm button');
-            const name = document.getElementById('registerName').value.trim();
-            const password = document.getElementById('registerPassword').value;
-
-            // 1. 基础验证
-            if (!name || name.length > 8) {
-                showMessage('名字不能为空且不超过8个字', 'error');
-                return;
-            }
-            if (!password || password.length < 6) {
-                showMessage('密码不能少于6位', 'error');
-                return;
-            }
-
-            // 2. 锁定按钮，防止重复点击
-            btn.disabled = true;
-            btn.textContent = '检查用户名...';
-            clearMessage();
-
-            try {
-                // 3. 检查用户名是否重复（直接访问数据库）
-                btn.textContent = '检查中...';
-                const nameRef = database.ref('usernames/' + name);
-                const snapshot = await nameRef.once('value');
-                
-                if (snapshot.exists()) {
-                    showMessage('该名字已被使用，请换一个', 'error');
-                    btn.disabled = false;
-                    btn.textContent = '注册';
-                    return;
-                }
-
-                // 4. 创建用户账号（使用模拟邮箱）
-                btn.textContent = '创建账号...';
-                const email = name + '@xiaoyuan.site'; // 简化的邮箱格式
-                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-                const userId = userCredential.user.uid;
-                
-                // 5. 保存用户信息到数据库
-                btn.textContent = '保存信息...';
-                const userData = {
-                    name: name,
-                    createdAt: new Date().toISOString()
-                };
-                
-                // 同时保存到两个地方
-                await Promise.all([
-                    nameRef.set(userId), // 记录用户名已被占用
-                    database.ref('users/' + userId).set(userData) // 保存用户详细信息
-                ]);
-
-                // 6. 注册成功
-                showMessage('🎉 注册成功！正在跳转...', 'success');
-                btn.textContent = '注册成功！';
-                
-                // 3秒后跳转到主页面
-                setTimeout(() => {
-                    window.location.href = 'main.html';
-                }, 2000);
-
-            } catch (error) {
-                // 7. 错误处理
-                console.error('注册错误详情:', error);
-                btn.disabled = false;
-                btn.textContent = '注册';
-                
-                let errorMsg = '注册失败: ';
-                switch (error.code) {
-                    case 'auth/email-already-in-use':
-                        errorMsg = '该用户名已被注册';
-                        break;
-                    case 'auth/network-request-failed':
-                        errorMsg = '网络错误，请检查连接';
-                        break;
-                    case 'auth/operation-not-allowed':
-                        errorMsg = '暂未开放注册，请联系管理员';
-                        break;
-                    case 'permission_denied':
-                        errorMsg = '数据库权限不足，请联系管理员';
-                        break;
-                    default:
-                        errorMsg += error.message || '未知错误';
-                }
-                showMessage(errorMsg, 'error');
-            }
-        }
-
-        // ========== 登录功能 ==========
-        async function loginUser() {
-            const btn = document.querySelector('#loginForm button');
-            const name = document.getElementById('loginName').value.trim();
-            const password = document.getElementById('loginPassword').value;
-
-            if (!name || !password) {
-                showMessage('请输入名字和密码', 'error');
-                return;
-            }
-
-            btn.disabled = true;
-            btn.textContent = '登录中...';
-            clearMessage();
-
-            try {
-                const email = name + '@xiaoyuan.site';
-                await auth.signInWithEmailAndPassword(email, password);
-                showMessage('登录成功！正在进入...', 'success');
-                setTimeout(() => {
-                    window.location.href = 'main.html';
-                }, 1000);
-            } catch (error) {
-                console.error('登录错误:', error);
-                btn.disabled = false;
-                btn.textContent = '进入校园';
-                showMessage('登录失败：名字或密码错误', 'error');
-            }
-        }
-
-        // 自动跳转：如果已经登录，直接去主页面
-        if (auth) {
-            auth.onAuthStateChanged(user => {
-                if (user) {
-                    console.log('用户已登录，自动跳转:', user.uid);
-                    window.location.href = 'main.html';
-                }
-            });
-        }
-    </script>
-</body>
-</html>
+// ========== 自动跳转：如果已经登录 ==========
+if (auth) {
+    auth.onAuthStateChanged(user => {
+        // 我们不使用Firebase Auth了，但保留这个以防万一
+    });
+}
