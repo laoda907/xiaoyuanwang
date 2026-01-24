@@ -218,9 +218,10 @@
                 try {
                     // 更新在线状态为离线
                     if (currentUser) {
-                        await database.ref(`status/${currentUser.uid}`).set({
+                        await database.ref(`status/${currentUser.uid}`).update({
                             online: false,
-                            lastSeen: new Date().toISOString()
+                            lastSeen: new Date().toISOString(),
+                            forum: 'offline'
                         });
                     }
                     
@@ -270,6 +271,22 @@
             
             // 更新论坛在线人数
             updateForumOnlineCount();
+            
+            // 更新自己的在线状态
+            updateMyOnlineStatus();
+        }
+        
+        // 更新自己的在线状态
+        function updateMyOnlineStatus() {
+            if (!currentUser) return;
+            
+            const userStatusRef = database.ref(`status/${currentUser.uid}`);
+            userStatusRef.update({
+                forum: currentForum,
+                lastSeen: new Date().toISOString()
+            }).catch(error => {
+                console.error('更新在线状态失败:', error);
+            });
         }
         
         // 加载消息
@@ -323,7 +340,7 @@
                 html += `
                     <div class="message-chat ${isOwn ? 'own' : 'other'}">
                         <div class="message-chat-header">
-                            <span class="sender">${msg.userName}</span>
+                            <span class="sender">${escapeHtml(msg.userName)}</span>
                             <span class="time">${time}</span>
                         </div>
                         <div class="message-chat-content">
@@ -386,85 +403,128 @@
             }
         }
         
-        // 更新在线状态
+        // 🔧 修复版：更新在线状态
         function updateOnlineStatus() {
-            const userStatusRef = database.ref(`status/${currentUser.uid}`);
-            const userInfoRef = database.ref(`users/${currentUser.uid}`);
+            if (!currentUser || !currentUser.uid) {
+                console.error('无法更新在线状态：用户未登录');
+                return;
+            }
             
-            // 设置在线
-            userStatusRef.set({
+            const userStatusRef = database.ref(`status/${currentUser.uid}`);
+            
+            // 设置在线状态
+            const onlineData = {
                 online: true,
                 lastSeen: new Date().toISOString(),
-                forum: currentForum
+                forum: currentForum,
+                userId: currentUser.uid,
+                userName: currentUser.name
+            };
+            
+            // 设置在线
+            userStatusRef.set(onlineData).catch(error => {
+                console.error('设置在线状态失败:', error);
             });
             
-            // 断开连接时设置为离线
-            userStatusRef.onDisconnect().set({
+            // 重要：设置断线处理
+            userStatusRef.onDisconnect().update({
                 online: false,
-                lastSeen: new Date().toISOString()
+                lastSeen: new Date().toISOString(),
+                forum: 'offline'
+            }).catch(error => {
+                console.error('设置断线处理失败:', error);
             });
             
             // 监听在线用户
+            if (onlineRef) {
+                onlineRef.off(); // 先移除旧的监听
+            }
+            
             onlineRef = database.ref('status');
             onlineRef.on('value', (snapshot) => {
                 const users = [];
                 let onlineCount = 0;
+                let processedIds = {};
                 
                 snapshot.forEach((childSnapshot) => {
                     const data = childSnapshot.val();
                     if (data.online) {
-                        onlineCount++;
-                        users.push({
-                            id: childSnapshot.key,
-                            ...data
-                        });
+                        // 排除重复和自己
+                        if (!processedIds[childSnapshot.key] && childSnapshot.key !== currentUser.uid) {
+                            onlineCount++;
+                            processedIds[childSnapshot.key] = true;
+                            users.push({
+                                id: childSnapshot.key,
+                                ...data
+                            });
+                        }
                     }
                 });
                 
                 updateOnlineList(users);
                 document.getElementById('onlineCount').textContent = onlineCount;
+                
+                // 更新当前论坛在线人数
+                updateForumOnlineCount();
             });
         }
         
-        // 更新在线用户列表
+        // 🔧 修复版：更新在线用户列表
         async function updateOnlineList(users) {
             const container = document.getElementById('onlineList');
             let html = '';
+            let seenUsers = {};
             
             for (const user of users) {
+                // 跳过当前用户自己
+                if (user.id === currentUser.uid) continue;
+                
+                // 跳过已显示的用户
+                if (seenUsers[user.id]) continue;
+                seenUsers[user.id] = true;
+                
                 try {
-                    // 获取用户名
                     const userInfo = await database.ref('users/' + user.id).once('value');
-                    const userName = userInfo.val()?.name || '匿名用户';
+                    const userData = userInfo.val();
+                    const userName = userData?.name || '匿名用户';
                     
-                    html += `
-                        <div class="online-user">
-                            <span class="online-dot">●</span>
-                            <span class="online-name">${userName}</span>
-                            <span class="online-forum">${getForumName(user.forum)}</span>
-                        </div>
-                    `;
+                    html += `<div class="online-user">
+                        <span class="online-dot">●</span>
+                        <span class="online-name">${escapeHtml(userName)}</span>
+                        <span class="online-forum">${getForumName(user.forum || 'general')}</span>
+                    </div>`;
                 } catch (error) {
-                    console.error('获取用户信息失败:', error);
+                    console.error('获取用户失败:', user.id);
                 }
             }
             
             container.innerHTML = html || '<div class="no-users">暂无其他在线用户</div>';
         }
         
-        // 更新论坛在线人数
+        // 🔧 修复版：更新论坛在线人数
         function updateForumOnlineCount() {
             if (!onlineRef) return;
             
             onlineRef.once('value').then((snapshot) => {
                 let count = 0;
+                let processedUsers = {};
+                
                 snapshot.forEach((childSnapshot) => {
                     const data = childSnapshot.val();
-                    if (data.online && data.forum === currentForum) {
-                        count++;
+                    // 只统计当前论坛的在线用户，且排除自己
+                    if (data.online && data.forum === currentForum && childSnapshot.key !== currentUser.uid) {
+                        // 避免重复计数
+                        if (!processedUsers[childSnapshot.key]) {
+                            count++;
+                            processedUsers[childSnapshot.key] = true;
+                        }
                     }
                 });
+                
                 document.getElementById('forumOnlineCount').textContent = count;
+            }).catch(error => {
+                console.error('更新论坛在线人数失败:', error);
+                document.getElementById('forumOnlineCount').textContent = '0';
             });
         }
         
@@ -485,6 +545,44 @@
                 showLoading(false);
             }
         }
+        
+        // 清理无效的在线状态
+        async function cleanupOnlineStatus() {
+            try {
+                const snapshot = await database.ref('status').once('value');
+                const now = Date.now();
+                const usersToCleanup = [];
+                
+                snapshot.forEach((childSnapshot) => {
+                    const data = childSnapshot.val();
+                    if (data.online) {
+                        // 如果最后在线时间超过5分钟，认为是无效状态
+                        const lastSeen = new Date(data.lastSeen).getTime();
+                        if (now - lastSeen > 5 * 60 * 1000) {
+                            usersToCleanup.push(childSnapshot.key);
+                        }
+                    }
+                });
+                
+                // 批量清理
+                const updates = {};
+                usersToCleanup.forEach(userId => {
+                    updates[`status/${userId}/online`] = false;
+                    updates[`status/${userId}/lastSeen`] = new Date().toISOString();
+                });
+                
+                if (Object.keys(updates).length > 0) {
+                    await database.ref().update(updates);
+                    console.log(`清理了 ${usersToCleanup.length} 个无效在线状态`);
+                }
+                
+            } catch (error) {
+                console.error('清理在线状态失败:', error);
+            }
+        }
+        
+        // 每10分钟清理一次
+        setInterval(cleanupOnlineStatus, 10 * 60 * 1000);
         
         // 工具函数：显示加载状态
         function showLoading(show) {
