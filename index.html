@@ -123,9 +123,13 @@
             const userIP = await getUserIP();
             console.log('用户IP:', userIP);
             
+            // 修复：IP地址编码（去掉非法字符）
+            const encodedIP = userIP.replace(/[\.#\$\[\]]/g, '_');
+            console.log('编码后的IP:', encodedIP);
+            
             // 检查IP是否已注册
             try {
-                const ipCheckSnapshot = await database.ref('ip_registrations/' + userIP).once('value');
+                const ipCheckSnapshot = await database.ref('ip_registrations/' + encodedIP).once('value');
                 if (ipCheckSnapshot.exists()) {
                     alert('一个IP只能注册一个账号，请直接登录');
                     return;
@@ -176,9 +180,11 @@
                 
                 await database.ref('usernames/' + encodedName).set(userId);
                 
-                await database.ref('ip_registrations/' + userIP).set({
+                // 修复：使用编码后的IP保存
+                await database.ref('ip_registrations/' + encodedIP).set({
                     userId: userId,
                     userName: name,
+                    ipAddress: userIP,
                     registeredAt: new Date().toISOString()
                 });
                 
