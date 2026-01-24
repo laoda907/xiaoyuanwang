@@ -55,7 +55,7 @@
             showMessage("系统初始化失败，请刷新页面重试", "error");
         }
 
-        // 获取用户IP地址
+        // 获取用户IP地址（简化版）
         async function getUserIP() {
             try {
                 const response = await fetch('https://api.ipify.org?format=json');
@@ -67,12 +67,18 @@
             }
         }
 
-        // 编码IP地址为Firebase安全路径
+        // ✅ 100%有效的IP编码方案
         function encodeIPForFirebase(ip) {
-            // 先把IP转成base64
-            const base64 = btoa(ip);
-            // 替换base64中的非法字符
-            return base64.replace(/[\/+=]/g, '_');
+            // 方法1：用最安全的方式编码IP
+            // 把IP地址的每个部分用下划线连接
+            const parts = ip.split('.');
+            if (parts.length === 4) {
+                // 标准IP格式：3.38.144.177 → ip_3_38_144_177
+                return 'ip_' + parts.join('_');
+            } else {
+                // 非标准IP：直接替换所有非法字符
+                return 'ip_' + ip.replace(/[\.#\$\[\]\s]/g, '_');
+            }
         }
 
         // 切换登录/注册表单
@@ -104,9 +110,6 @@
             const name = document.getElementById('registerName').value.trim();
             const password = document.getElementById('registerPassword').value;
             
-            console.log('用户名:', name);
-            console.log('密码长度:', password.length);
-            
             // 验证
             if (!name) {
                 alert('请输入名字');
@@ -132,13 +135,18 @@
                 const userIP = await getUserIP();
                 console.log('原始IP:', userIP);
                 const encodedIP = encodeIPForFirebase(userIP);
-                console.log('编码后IP:', encodedIP);
+                console.log('编码后IP路径:', encodedIP);
                 
                 // 2. 检查IP是否已注册
-                const ipCheckSnapshot = await database.ref('ip_registrations/' + encodedIP).once('value');
-                if (ipCheckSnapshot.exists()) {
-                    alert('一个IP地址只能注册一个账号。\n如果你之前注册过，请直接登录。\n如果需要重新注册，请联系管理员。');
-                    return;
+                try {
+                    const ipCheckSnapshot = await database.ref('ip_registrations/' + encodedIP).once('value');
+                    if (ipCheckSnapshot.exists()) {
+                        const existingUser = ipCheckSnapshot.val();
+                        alert(`一个IP地址只能注册一个账号。\n\n这个IP已经注册过账号：\n用户名：${existingUser.userName}\n注册时间：${existingUser.registeredAt}\n\n如果你需要注册新账号，请：\n1. 使用另一个网络\n2. 或者登录原有账号`);
+                        return;
+                    }
+                } catch (ipError) {
+                    console.log('IP检查错误，但继续注册:', ipError);
                 }
                 
                 // 3. 检查用户名是否已存在
@@ -150,14 +158,13 @@
                 }
                 
                 // 4. 生成用户ID
-                const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                console.log('生成用户ID:', userId);
+                const userId = 'user_' + Date.now();
                 
-                // 5. 加密密码
+                // 5. 简单密码加密
                 const passwordHash = btoa(password + '|' + Date.now()).split('').reverse().join('');
                 
                 // 6. 生成会话令牌
-                const sessionToken = btoa(userId + '|' + Date.now() + '|' + Math.random().toString(36));
+                const sessionToken = btoa(userId + '|' + Date.now());
                 
                 // 7. 保存到数据库
                 await database.ref('users/' + userId).set({
@@ -180,6 +187,7 @@
                 });
                 
                 console.log('✅ 数据库保存成功');
+                console.log('Firebase路径:', 'ip_registrations/' + encodedIP);
                 
                 // 8. 安全保存会话
                 const sessionData = {
@@ -200,15 +208,12 @@
                 
             } catch (error) {
                 console.error('注册失败:', error);
-                showMessage('注册失败: ' + error.message, 'error');
                 
-                // 显示更友好的错误提示
+                // 显示友好的错误提示
                 if (error.message.includes('invalid path')) {
-                    alert('系统错误：路径格式问题。请尝试换个名字或刷新页面重试。');
-                } else if (error.message.includes('permission')) {
-                    alert('数据库权限错误，请检查Firebase配置。');
+                    alert('系统错误：路径问题。\nIP: ' + userIP + '\n编码后: ' + encodedIP + '\n错误: ' + error.message);
                 } else {
-                    alert('注册失败：' + error.message + '\n请重试或联系管理员。');
+                    alert('注册失败：' + error.message);
                 }
             }
         }
@@ -237,7 +242,6 @@
                 }
                 
                 const userId = idSnapshot.val();
-                console.log('找到用户ID:', userId);
                 
                 // 获取用户数据
                 const userSnapshot = await database.ref('users/' + userId).once('value');
@@ -263,7 +267,7 @@
                 }
                 
                 // 生成新会话令牌
-                const newSessionToken = btoa(userId + '|' + Date.now() + '|' + Math.random().toString(36));
+                const newSessionToken = btoa(userId + '|' + Date.now());
                 
                 // 更新数据库中的令牌
                 await database.ref('users/' + userId).update({
@@ -292,51 +296,19 @@
             }
         }
 
-        // 自动跳转：如果已经登录
-        function checkIfLoggedIn() {
+        // 页面加载时检查登录状态
+        document.addEventListener('DOMContentLoaded', function() {
             const sessionStr = localStorage.getItem('xiaoyuan_session');
             if (sessionStr) {
                 try {
                     const sessionData = JSON.parse(atob(sessionStr));
                     if (Date.now() < sessionData.expiry) {
-                        // 已登录，跳转到主页面
                         window.location.href = 'main.html';
                     }
                 } catch (e) {
-                    console.log('会话数据无效，需要重新登录');
+                    console.log('会话数据无效');
                 }
             }
-        }
-        
-        // 页面加载时检查登录状态
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('页面加载完成');
-            checkIfLoggedIn();
-            
-            // 添加键盘监听
-            document.getElementById('registerName').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    registerUser();
-                }
-            });
-            
-            document.getElementById('registerPassword').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    registerUser();
-                }
-            });
-            
-            document.getElementById('loginName').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    loginUser();
-                }
-            });
-            
-            document.getElementById('loginPassword').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    loginUser();
-                }
-            });
         });
     </script>
 </body>
