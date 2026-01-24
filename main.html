@@ -98,7 +98,7 @@
     <div id="toast" class="toast"></div>
 
     <script>
-        // ========== Firebase 配置（与 index.html 一致）==========
+        // ========== Firebase 配置 ==========
         const firebaseConfig = {
             apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
             authDomain: "laoda907-22511.firebaseapp.com",
@@ -116,53 +116,124 @@
         let messagesRef = null;
         let onlineRef = null;
         
-        // 初始化
-        document.addEventListener('DOMContentLoaded', function() {
-            initApp();
-        });
+        // 🔐 安全验证函数
+        async function checkAuth() {
+            try {
+                // 获取会话数据
+                const sessionStr = localStorage.getItem('xiaoyuan_session');
+                if (!sessionStr) {
+                    console.log('没有找到会话数据');
+                    throw new Error('请先登录');
+                }
+                
+                // 解码会话数据
+                const sessionData = JSON.parse(atob(sessionStr));
+                
+                // 检查是否过期
+                if (Date.now() > sessionData.expiry) {
+                    console.log('会话已过期');
+                    throw new Error('登录已过期，请重新登录');
+                }
+                
+                // 验证会话令牌
+                const userSnapshot = await database.ref('users/' + sessionData.userId).once('value');
+                const userData = userSnapshot.val();
+                
+                if (!userData) {
+                    console.log('用户数据不存在');
+                    throw new Error('用户不存在');
+                }
+                
+                if (userData.sessionToken !== sessionData.token) {
+                    console.log('令牌不匹配');
+                    throw new Error('安全验证失败，请重新登录');
+                }
+                
+                // ✅ 验证通过，显示用户名
+                document.getElementById('userName').textContent = sessionData.userName;
+                console.log('✅ 用户验证通过:', sessionData.userName);
+                return {
+                    uid: sessionData.userId,
+                    name: sessionData.userName
+                };
+                
+            } catch (error) {
+                console.error('❌ 验证失败:', error.message);
+                // 清除会话数据
+                localStorage.removeItem('xiaoyuan_session');
+                // 跳转到登录页
+                window.location.href = 'index.html';
+                return null;
+            }
+        }
         
+        // 🔄 初始化函数
         async function initApp() {
+            console.log('开始初始化应用...');
             showLoading(true);
             
             try {
                 // 初始化 Firebase
                 if (!firebase.apps.length) {
                     firebase.initializeApp(firebaseConfig);
+                    console.log('✅ Firebase 初始化成功');
                 }
+                
                 auth = firebase.auth();
                 database = firebase.database();
                 
-                // 检查登录状态
-                auth.onAuthStateChanged(async (user) => {
-                    if (user) {
-                        currentUser = user;
-                        await loadUserInfo();
-                        setupChat();
-                        updateOnlineStatus();
-                    } else {
-                        // 未登录，跳回首页
-                        window.location.href = 'index.html';
-                    }
-                });
+                // 首先验证用户
+                const userInfo = await checkAuth();
+                if (!userInfo) {
+                    console.log('用户验证失败，已跳转到登录页');
+                    return;
+                }
+                
+                currentUser = userInfo;
+                console.log('✅ 用户验证成功:', userInfo.name);
+                
+                // 设置聊天功能
+                setupChat();
+                updateOnlineStatus();
+                
+                showLoading(false);
+                console.log('✅ 应用初始化完成');
                 
             } catch (error) {
-                console.error('初始化失败:', error);
-                showToast('系统初始化失败，请刷新页面', 'error');
+                console.error('❌ 初始化失败:', error);
+                showToast('系统初始化失败，请刷新页面重试', 'error');
                 showLoading(false);
             }
         }
         
-        // 加载用户信息
-        async function loadUserInfo() {
-            try {
-                const userRef = database.ref('users/' + currentUser.uid);
-                const snapshot = await userRef.once('value');
-                if (snapshot.exists()) {
-                    const userData = snapshot.val();
-                    document.getElementById('userName').textContent = userData.name || '未知用户';
+        // 📱 页面加载时运行
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('📄 页面加载完成，开始验证用户...');
+            initApp();
+        });
+        
+        // 🚪 退出登录函数
+        async function logout() {
+            if (confirm('确定要退出登录吗？')) {
+                try {
+                    // 更新在线状态为离线
+                    if (currentUser) {
+                        await database.ref(`status/${currentUser.uid}`).set({
+                            online: false,
+                            lastSeen: new Date().toISOString()
+                        });
+                    }
+                    
+                    // 清除会话数据
+                    localStorage.removeItem('xiaoyuan_session');
+                    
+                    // 跳转到登录页
+                    window.location.href = 'index.html';
+                    
+                } catch (error) {
+                    console.error('退出失败:', error);
+                    showToast('退出失败，请重试', 'error');
                 }
-            } catch (error) {
-                console.error('加载用户信息失败:', error);
             }
         }
         
@@ -170,7 +241,6 @@
         function setupChat() {
             // 默认进入综合讨论区
             switchForum('general');
-            showLoading(false);
         }
         
         // 切换论坛
@@ -251,12 +321,12 @@
                 });
                 
                 html += `
-                    <div class="message ${isOwn ? 'own' : 'other'}">
-                        <div class="message-header">
+                    <div class="message-chat ${isOwn ? 'own' : 'other'}">
+                        <div class="message-chat-header">
                             <span class="sender">${msg.userName}</span>
                             <span class="time">${time}</span>
                         </div>
-                        <div class="message-content">
+                        <div class="message-chat-content">
                             ${escapeHtml(msg.text)}
                         </div>
                     </div>
@@ -416,36 +486,6 @@
             }
         }
         
-        // 退出登录
-        async function logout() {
-            try {
-                showLoading(true);
-                
-                // 更新在线状态为离线
-                if (currentUser) {
-                    await database.ref(`status/${currentUser.uid}`).set({
-                        online: false,
-                        lastSeen: new Date().toISOString()
-                    });
-                }
-                
-                // Firebase 登出
-                await auth.signOut();
-                
-                // 清除本地存储
-                localStorage.clear();
-                sessionStorage.clear();
-                
-                // 跳转到登录页
-                window.location.href = 'index.html';
-                
-            } catch (error) {
-                console.error('退出失败:', error);
-                showToast('退出失败，请重试', 'error');
-                showLoading(false);
-            }
-        }
-        
         // 工具函数：显示加载状态
         function showLoading(show) {
             document.getElementById('loading').style.display = show ? 'flex' : 'none';
@@ -487,4 +527,4 @@
         
     </script>
 </body>
-  </html>
+    </html>
