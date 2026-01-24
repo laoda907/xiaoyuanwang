@@ -93,18 +93,26 @@
 
         // ========== 注册功能 ==========
         async function registerUser() {
+            console.log('注册按钮被点击')
+            
             const name = document.getElementById('registerName').value.trim();
             const password = document.getElementById('registerPassword').value;
             
+            console.log('输入的名字:', name); // 添加这行
+            console.log('输入的密码长度:', password.length); // 添加这行
+            
             // 验证
             if (!name || name.length > 8) {
+                console.log('名字验证失败'); // 添加这行
                 showMessage('名字不能为空且不超过8个字', 'error');
                 return;
             }
             if (!password || password.length < 6) {
+                console.log('密码验证失败'); // 添加这行
                 showMessage('密码不能少于6位', 'error');
                 return;
             }
+            console.log('验证通过，开始注册...'); // 添加这行
             
             // 获取用户IP
             const userIP = await getUserIP();
