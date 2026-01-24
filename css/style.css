@@ -497,3 +497,58 @@ button:active {
         font-size: 18px;
     }
 }
+/* ====== 修复样式 ====== */
+
+/* 防止按钮被禁用样式影响 */
+button:disabled {
+    opacity: 0.7 !important;
+    cursor: not-allowed !important;
+}
+
+/* 确保输入框可操作 */
+input:disabled {
+    background: #f5f5f5 !important;
+}
+
+/* 修复消息显示 */
+.message {
+    transition: all 0.3s ease !important;
+    animation: fadeIn 0.5s ease !important;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 手机端优化 */
+@media (max-width: 768px) {
+    .auth-container {
+        margin: 15px !important;
+        padding: 25px !important;
+    }
+    
+    input, button {
+        font-size: 16px !important; /* 防止手机缩放 */
+    }
+    
+    #emergency-panel {
+        left: 5px !important;
+        right: 5px !important;
+        bottom: 5px !important;
+        max-width: none !important;
+    }
+}
+
+/* 加载状态指示器 */
+.loading-dots:after {
+    content: '.';
+    animation: dots 1.5s steps(5, end) infinite;
+}
+
+@keyframes dots {
+    0%, 20% { content: '.'; }
+    40% { content: '..'; }
+    60% { content: '...'; }
+    80%, 100% { content: ''; }
+}
