@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校园网 - 主页</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .main-container {
+            max-width: 800px;
+            margin: 100px auto;
+            padding: 40px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        
+        .welcome-title {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 32px;
+        }
+        
+        .welcome-subtitle {
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 16px;
+        }
+        
+        .forums-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 40px 0;
+        }
+        
+        .forum-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid #e1e1e1;
+        }
+        
+        .forum-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-color: #667eea;
+        }
+        
+        .forum-icon {
+            font-size: 40px;
+            margin-bottom: 15px;
+        }
+        
+        .forum-name {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .forum-desc {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        .enter-btn {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .user-info {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f1f8ff;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .logout-btn {
+            padding: 10px 25px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 500;
+            margin-top: 20px;
+        }
+        
+        .admin-link {
+            margin-top: 30px;
+            font-size: 14px;
+        }
+        
+        .admin-link a {
+            color: #666;
+            text-decoration: none;
+        }
+        
+        .admin-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <h1 class="welcome-title">🏫 欢迎来到校园网</h1>
+        <p class="welcome-subtitle">选择聊天广场，开始与同学交流</p>
+        
+        <div class="user-info">
+            <p>你好，<span id="userName">用户</span>！</p>
+            <p style="font-size: 14px; color: #666; margin-top: 5px;">点击下方论坛进入聊天</p>
+        </div>
+        
+        <div class="forums-grid">
+            <div class="forum-card" onclick="enterForum('general')">
+                <div class="forum-icon">💬</div>
+                <div class="forum-name">综合讨论区</div>
+                <div class="forum-desc">各种话题随意聊</div>
+                <button class="enter-btn">进入聊天</button>
+            </div>
+            
+            <div class="forum-card" onclick="enterForum('study')">
+                <div class="forum-icon">📚</div>
+                <div class="forum-name">学习交流</div>
+                <div class="forum-desc">学习问题互帮互助</div>
+                <button class="enter-btn">进入聊天</button>
+            </div>
+            
+            <div class="forum-card" onclick="enterForum('fun')">
+                <div class="forum-icon">🎮</div>
+                <div class="forum-name">休闲娱乐</div>
+                <div class="forum-desc">游戏、电影、音乐分享</div>
+                <button class="enter-btn">进入聊天</button>
+            </div>
+        </div>
+        
+        <button class="logout-btn" onclick="logout()">退出登录</button>
+        
+        <div class="admin-link">
+            <a href="admin-login.html" target="_blank">⚙️ 后台管理</a>
+        </div>
+    </div>
+
+    <script>
+        // 检查是否已登录
+        document.addEventListener('DOMContentLoaded', function() {
+            const sessionStr = localStorage.getItem('xiaoyuan_session');
+            
+            if (!sessionStr) {
+                // 未登录，跳转到登录页
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            try {
+                // 解析会话数据
+                const sessionData = JSON.parse(atob(sessionStr));
+                
+                // 检查会话是否过期
+                if (Date.now() > sessionData.expiry) {
+                    localStorage.removeItem('xiaoyuan_session');
+                    window.location.href = 'index.html';
+                    return;
+                }
+                
+                // 显示用户名
+                document.getElementById('userName').textContent = sessionData.userName || '用户';
+                
+            } catch (error) {
+                console.error('会话验证失败:', error);
+                localStorage.removeItem('xiaoyuan_session');
+                window.location.href = 'index.html';
+            }
+        });
+        
+        // 进入论坛
+        function enterForum(forumId) {
+            // 保存选择的论坛到临时存储
+            sessionStorage.setItem('selectedForum', forumId);
+            // 跳转到聊天页面
+            window.location.href = 'chat.html';
+        }
+        
+        // 退出登录
+        function logout() {
+            if (confirm('确定要退出登录吗？')) {
+                localStorage.removeItem('xiaoyuan_session');
+                window.location.href = 'index.html';
+            }
+        }
+    </script>
+</body>
+</html>
