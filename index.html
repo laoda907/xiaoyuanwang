@@ -6,7 +6,6 @@
     <title>校园网 - 登录</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-database.js"></script>
 </head>
 <body>
@@ -34,7 +33,7 @@
     </div>
 
     <script>
-        // ========== 配置文件 ==========
+        // ========== Firebase 配置 ==========
         const firebaseConfig = {
             apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
             authDomain: "laoda907-22511.firebaseapp.com",
@@ -46,10 +45,9 @@
         };
 
         // 初始化 Firebase
-        let auth, database;
+        let database;
         try {
             firebase.initializeApp(firebaseConfig);
-            auth = firebase.auth();
             database = firebase.database();
             console.log("✅ Firebase 初始化成功");
         } catch (error) {
@@ -64,8 +62,8 @@
                 const data = await response.json();
                 return data.ip;
             } catch (error) {
-                console.error('获取IP失败:', error);
-                return 'unknown_ip_' + Date.now();
+                console.log('获取IP失败，使用替代方案');
+                return 'local_' + Date.now();
             }
         }
 
@@ -93,160 +91,201 @@
 
         // ========== 注册功能 ==========
         async function registerUser() {
-            console.log('注册按钮被点击')
+            console.log('注册按钮被点击');
             
             const name = document.getElementById('registerName').value.trim();
             const password = document.getElementById('registerPassword').value;
             
-            console.log('输入的名字:', name); // 添加这行
-            console.log('输入的密码长度:', password.length); // 添加这行
+            console.log('输入的名字:', name);
+            console.log('输入的密码:', password ? '已输入' : '未输入');
             
             // 验证
-            if (!name || name.length > 8) {
-                console.log('名字验证失败'); // 添加这行
-                showMessage('名字不能为空且不超过8个字', 'error');
+            if (!name) {
+                alert('请输入名字');
                 return;
             }
-            if (!password || password.length < 6) {
-                console.log('密码验证失败'); // 添加这行
-                showMessage('密码不能少于6位', 'error');
+            if (name.length > 8) {
+                alert('名字不能超过8个字');
                 return;
             }
-            console.log('验证通过，开始注册...'); // 添加这行
+            if (!password) {
+                alert('请输入密码');
+                return;
+            }
+            if (password.length < 6) {
+                alert('密码不能少于6位');
+                return;
+            }
+            
+            showMessage('正在注册...', 'success');
             
             // 获取用户IP
             const userIP = await getUserIP();
+            console.log('用户IP:', userIP);
             
             // 检查IP是否已注册
-            const ipCheckSnapshot = await database.ref('ip_registrations/' + userIP).once('value');
-            if (ipCheckSnapshot.exists()) {
-                showMessage('注册失败，请使用已注册账号登录', 'error');
-                return;
+            try {
+                const ipCheckSnapshot = await database.ref('ip_registrations/' + userIP).once('value');
+                if (ipCheckSnapshot.exists()) {
+                    alert('一个IP只能注册一个账号，请直接登录');
+                    return;
+                }
+            } catch (error) {
+                console.log('IP检查跳过:', error);
             }
             
             // 编码中文用户名
             const encodedName = encodeURIComponent(name);
+            console.log('编码后的名字:', encodedName);
             
             // 检查用户名是否已存在
-            const nameSnapshot = await database.ref('usernames/' + encodedName).once('value');
-            if (nameSnapshot.exists()) {
-                showMessage('名字已被使用', 'error');
+            try {
+                const nameSnapshot = await database.ref('usernames/' + encodedName).once('value');
+                if (nameSnapshot.exists()) {
+                    alert('名字已被使用');
+                    return;
+                }
+            } catch (error) {
+                console.log('用户名检查出错:', error);
+                alert('检查用户名时出错');
                 return;
             }
             
             // 生成用户ID
             const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            console.log('生成用户ID:', userId);
             
-            // 加密密码
+            // 加密密码（简单版）
             const passwordHash = btoa(password + '|' + Date.now()).split('').reverse().join('');
             
             // 生成会话令牌
             const sessionToken = btoa(userId + '|' + Date.now() + '|' + Math.random().toString(36));
             
-            // 保存到数据库
-            await database.ref('users/' + userId).set({
-                name: name,
-                encodedName: encodedName,
-                passwordHash: passwordHash,
-                sessionToken: sessionToken,
-                ipAddress: userIP,
-                createdAt: new Date().toISOString(),
-                lastLogin: new Date().toISOString()
-            });
-            
-            // 记录用户名
-            await database.ref('usernames/' + encodedName).set(userId);
-            
-            // 记录IP注册信息
-            await database.ref('ip_registrations/' + userIP).set({
-                userId: userId,
-                userName: name,
-                registeredAt: new Date().toISOString()
-            });
-            
-            // 安全保存会话
-            const sessionData = {
-                userId: userId,
-                userName: name,
-                token: sessionToken,
-                ip: userIP,
-                expiry: Date.now() + 7 * 24 * 60 * 60 * 1000
-            };
-            localStorage.setItem('xiaoyuan_session', btoa(JSON.stringify(sessionData)));
-            
-            showMessage('🎉 注册成功！正在跳转...', 'success');
-            setTimeout(() => {
-                window.location.href = 'main.html';
-            }, 1500);
+            try {
+                // 保存到数据库
+                console.log('正在保存到数据库...');
+                await database.ref('users/' + userId).set({
+                    name: name,
+                    encodedName: encodedName,
+                    passwordHash: passwordHash,
+                    sessionToken: sessionToken,
+                    ipAddress: userIP,
+                    createdAt: new Date().toISOString(),
+                    lastLogin: new Date().toISOString()
+                });
+                
+                await database.ref('usernames/' + encodedName).set(userId);
+                
+                await database.ref('ip_registrations/' + userIP).set({
+                    userId: userId,
+                    userName: name,
+                    registeredAt: new Date().toISOString()
+                });
+                
+                console.log('数据库保存成功');
+                
+                // 安全保存会话
+                const sessionData = {
+                    userId: userId,
+                    userName: name,
+                    token: sessionToken,
+                    ip: userIP,
+                    expiry: Date.now() + 7 * 24 * 60 * 60 * 1000
+                };
+                localStorage.setItem('xiaoyuan_session', btoa(JSON.stringify(sessionData)));
+                
+                showMessage('🎉 注册成功！正在跳转...', 'success');
+                console.log('注册完成，跳转到主页');
+                
+                setTimeout(() => {
+                    window.location.href = 'main.html';
+                }, 1500);
+                
+            } catch (error) {
+                console.error('保存数据库时出错:', error);
+                alert('注册失败，请重试: ' + error.message);
+            }
         }
 
         // ========== 登录功能 ==========
         async function loginUser() {
+            console.log('登录按钮被点击');
+            
             const name = document.getElementById('loginName').value.trim();
             const password = document.getElementById('loginPassword').value;
             
             if (!name || !password) {
-                showMessage('请输入名字和密码', 'error');
+                alert('请输入名字和密码');
                 return;
             }
+            
+            showMessage('正在登录...', 'success');
             
             // 编码中文用户名
             const encodedName = encodeURIComponent(name);
             
             // 找用户ID
-            const idSnapshot = await database.ref('usernames/' + encodedName).once('value');
-            if (!idSnapshot.exists()) {
-                showMessage('用户不存在', 'error');
-                return;
-            }
-            
-            const userId = idSnapshot.val();
-            
-            // 获取用户数据
-            const userSnapshot = await database.ref('users/' + userId).once('value');
-            const userData = userSnapshot.val();
-            
-            if (!userData) {
-                showMessage('用户数据错误', 'error');
-                return;
-            }
-            
-            // 验证密码
             try {
-                const reversedHash = userData.passwordHash.split('').reverse().join('');
-                const decoded = atob(reversedHash);
-                const parts = decoded.split('|');
-                if (parts[0] !== password) {
-                    throw new Error('密码不匹配');
+                const idSnapshot = await database.ref('usernames/' + encodedName).once('value');
+                if (!idSnapshot.exists()) {
+                    alert('用户不存在');
+                    return;
                 }
-            } catch {
-                showMessage('密码错误', 'error');
-                return;
+                
+                const userId = idSnapshot.val();
+                console.log('找到用户ID:', userId);
+                
+                // 获取用户数据
+                const userSnapshot = await database.ref('users/' + userId).once('value');
+                const userData = userSnapshot.val();
+                
+                if (!userData) {
+                    alert('用户数据错误');
+                    return;
+                }
+                
+                // 验证密码
+                try {
+                    const reversedHash = userData.passwordHash.split('').reverse().join('');
+                    const decoded = atob(reversedHash);
+                    const parts = decoded.split('|');
+                    if (parts[0] !== password) {
+                        alert('密码错误');
+                        return;
+                    }
+                } catch {
+                    alert('密码错误');
+                    return;
+                }
+                
+                // 生成新会话令牌
+                const newSessionToken = btoa(userId + '|' + Date.now() + '|' + Math.random().toString(36));
+                
+                // 更新数据库中的令牌
+                await database.ref('users/' + userId).update({
+                    sessionToken: newSessionToken,
+                    lastLogin: new Date().toISOString()
+                });
+                
+                // 安全保存会话
+                const sessionData = {
+                    userId: userId,
+                    userName: name,
+                    token: newSessionToken,
+                    ip: userData.ipAddress || 'unknown',
+                    expiry: Date.now() + 7 * 24 * 60 * 60 * 1000
+                };
+                localStorage.setItem('xiaoyuan_session', btoa(JSON.stringify(sessionData)));
+                
+                showMessage('✅ 登录成功！', 'success');
+                setTimeout(() => {
+                    window.location.href = 'main.html';
+                }, 1000);
+                
+            } catch (error) {
+                console.error('登录出错:', error);
+                alert('登录失败: ' + error.message);
             }
-            
-            // 生成新会话令牌
-            const newSessionToken = btoa(userId + '|' + Date.now() + '|' + Math.random().toString(36));
-            
-            // 更新数据库中的令牌
-            await database.ref('users/' + userId).update({
-                sessionToken: newSessionToken,
-                lastLogin: new Date().toISOString()
-            });
-            
-            // 安全保存会话
-            const sessionData = {
-                userId: userId,
-                userName: name,
-                token: newSessionToken,
-                ip: userData.ipAddress || 'unknown',
-                expiry: Date.now() + 7 * 24 * 60 * 60 * 1000
-            };
-            localStorage.setItem('xiaoyuan_session', btoa(JSON.stringify(sessionData)));
-            
-            showMessage('✅ 登录成功！', 'success');
-            setTimeout(() => {
-                window.location.href = 'main.html';
-            }, 1000);
         }
 
         // 自动跳转：如果已经登录
@@ -267,7 +306,33 @@
         
         // 页面加载时检查登录状态
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('页面加载完成');
             checkIfLoggedIn();
+            
+            // 添加键盘监听
+            document.getElementById('registerName').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    registerUser();
+                }
+            });
+            
+            document.getElementById('registerPassword').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    registerUser();
+                }
+            });
+            
+            document.getElementById('loginName').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    loginUser();
+                }
+            });
+            
+            document.getElementById('loginPassword').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    loginUser();
+                }
+            });
         });
     </script>
 </body>
