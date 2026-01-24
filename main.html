@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校园网 - 聊天平台</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- 使用更稳定的 Firebase 7.24.0 版本 -->
+    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-database.js"></script>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <div class="navbar">
+        <div class="logo">
+            <h2>🏫 校园网聊天平台</h2>
+        </div>
+        <div class="user-info">
+            <span id="userName">加载中...</span>
+            <button onclick="logout()" class="logout-btn">退出</button>
+        </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="container">
+        <!-- 左侧论坛选择 -->
+        <div class="sidebar">
+            <div class="forum-list">
+                <h3>📚 校园论坛</h3>
+                <div class="forum-item active" data-forum="general" onclick="switchForum('general')">
+                    <span class="forum-icon">💬</span>
+                    <span class="forum-name">综合讨论区</span>
+                    <span class="unread-count" id="unread-general">0</span>
+                </div>
+                <div class="forum-item" data-forum="study" onclick="switchForum('study')">
+                    <span class="forum-icon">📖</span>
+                    <span class="forum-name">学习交流</span>
+                    <span class="unread-count" id="unread-study">0</span>
+                </div>
+                <div class="forum-item" data-forum="fun" onclick="switchForum('fun')">
+                    <span class="forum-icon">🎮</span>
+                    <span class="forum-name">休闲娱乐</span>
+                    <span class="unread-count" id="unread-fun">0</span>
+                </div>
+            </div>
+            
+            <div class="online-users">
+                <h3>👥 在线用户 (<span id="onlineCount">0</span>)</h3>
+                <div id="onlineList">
+                    <div class="loading">加载中...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧聊天区 -->
+        <div class="chat-area">
+            <!-- 当前论坛标题 -->
+            <div class="chat-header">
+                <h2 id="currentForum">综合讨论区</h2>
+                <div class="forum-stats">
+                    <span>📝 <span id="messageCount">0</span> 条消息</span>
+                    <span>👥 <span id="forumOnlineCount">0</span> 人在线</span>
+                </div>
+            </div>
+
+            <!-- 消息展示区 -->
+            <div class="messages-container" id="messagesContainer">
+                <div class="welcome-message">
+                    <p>👋 欢迎来到校园网聊天平台！</p>
+                    <p>选择一个论坛开始聊天吧～</p>
+                </div>
+                <!-- 消息会动态加载到这里 -->
+            </div>
+
+            <!-- 消息输入区 -->
+            <div class="message-input">
+                <input 
+                    type="text" 
+                    id="messageInput" 
+                    placeholder="在这里输入消息... (按 Enter 发送)"
+                    maxlength="500"
+                    onkeypress="if(event.keyCode===13) sendMessage()"
+                >
+                <button onclick="sendMessage()" id="sendBtn">发送</button>
+                <button onclick="clearChat()" class="clear-btn">清空聊天</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载指示器 -->
+    <div id="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p>加载中...</p>
+    </div>
+
+    <!-- 消息提示 -->
+    <div id="toast" class="toast"></div>
+
+    <script>
+        // ========== Firebase 配置（与 index.html 一致）==========
+        const firebaseConfig = {
+            apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
+            authDomain: "laoda907-22511.firebaseapp.com",
+            databaseURL: "https://laoda907-22511-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "laoda907-22511",
+            storageBucket: "laoda907-22511.firebasestorage.app",
+            messagingSenderId: "176173610464",
+            appId: "1:176173610464:web:3ff86202f9b05f24b36785"
+        };
+        
+        // 全局变量
+        let auth, database;
+        let currentUser = null;
+        let currentForum = 'general';
+        let messagesRef = null;
+        let onlineRef = null;
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initApp();
+        });
+        
+        async function initApp() {
+            showLoading(true);
+            
+            try {
+                // 初始化 Firebase
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                auth = firebase.auth();
+                database = firebase.database();
+                
+                // 检查登录状态
+                auth.onAuthStateChanged(async (user) => {
+                    if (user) {
+                        currentUser = user;
+                        await loadUserInfo();
+                        setupChat();
+                        updateOnlineStatus();
+                    } else {
+                        // 未登录，跳回首页
+                        window.location.href = 'index.html';
+                    }
+                });
+                
+            } catch (error) {
+                console.error('初始化失败:', error);
+                showToast('系统初始化失败，请刷新页面', 'error');
+                showLoading(false);
+            }
+        }
+        
+        // 加载用户信息
+        async function loadUserInfo() {
+            try {
+                const userRef = database.ref('users/' + currentUser.uid);
+                const snapshot = await userRef.once('value');
+                if (snapshot.exists()) {
+                    const userData = snapshot.val();
+                    document.getElementById('userName').textContent = userData.name || '未知用户';
+                }
+            } catch (error) {
+                console.error('加载用户信息失败:', error);
+            }
+        }
+        
+        // 设置聊天功能
+        function setupChat() {
+            // 默认进入综合讨论区
+            switchForum('general');
+            showLoading(false);
+        }
+        
+        // 切换论坛
+        function switchForum(forumId) {
+            // 更新UI
+            document.querySelectorAll('.forum-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[data-forum="${forumId}"]`).classList.add('active');
+            
+            // 更新当前论坛
+            currentForum = forumId;
+            
+            // 更新标题
+            const forumNames = {
+                'general': '综合讨论区',
+                'study': '学习交流',
+                'fun': '休闲娱乐'
+            };
+            document.getElementById('currentForum').textContent = forumNames[forumId];
+            
+            // 清空未读计数
+            document.getElementById(`unread-${forumId}`).textContent = '0';
+            
+            // 加载该论坛的消息
+            loadMessages();
+            
+            // 更新论坛在线人数
+            updateForumOnlineCount();
+        }
+        
+        // 加载消息
+        function loadMessages() {
+            const container = document.getElementById('messagesContainer');
+            container.innerHTML = '<div class="loading">加载消息中...</div>';
+            
+            // 清除之前的监听
+            if (messagesRef) {
+                messagesRef.off();
+            }
+            
+            // 监听新消息
+            messagesRef = database.ref(`forums/${currentForum}/messages`);
+            messagesRef.limitToLast(50).on('value', (snapshot) => {
+                const messages = [];
+                snapshot.forEach((childSnapshot) => {
+                    messages.push({
+                        id: childSnapshot.key,
+                        ...childSnapshot.val()
+                    });
+                });
+                
+                displayMessages(messages);
+                updateMessageCount(messages.length);
+            });
+        }
+        
+        // 显示消息
+        function displayMessages(messages) {
+            const container = document.getElementById('messagesContainer');
+            
+            if (messages.length === 0) {
+                container.innerHTML = `
+                    <div class="welcome-message">
+                        <p>📭 这个论坛还没有消息</p>
+                        <p>快来发送第一条消息吧！</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            messages.forEach(msg => {
+                const isOwn = msg.userId === currentUser.uid;
+                const time = new Date(msg.timestamp).toLocaleTimeString('zh-CN', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                html += `
+                    <div class="message ${isOwn ? 'own' : 'other'}">
+                        <div class="message-header">
+                            <span class="sender">${msg.userName}</span>
+                            <span class="time">${time}</span>
+                        </div>
+                        <div class="message-content">
+                            ${escapeHtml(msg.text)}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+            
+            // 滚动到底部
+            setTimeout(() => {
+                container.scrollTop = container.scrollHeight;
+            }, 100);
+        }
+        
+        // 发送消息
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            const btn = document.getElementById('sendBtn');
+            
+            if (!text) return;
+            
+            // 禁用按钮防止重复发送
+            btn.disabled = true;
+            btn.textContent = '发送中...';
+            
+            try {
+                // 获取用户名
+                const userRef = database.ref('users/' + currentUser.uid);
+                const snapshot = await userRef.once('value');
+                const userName = snapshot.val()?.name || '匿名用户';
+                
+                // 创建消息对象
+                const message = {
+                    text: text,
+                    userId: currentUser.uid,
+                    userName: userName,
+                    timestamp: new Date().toISOString(),
+                    forum: currentForum
+                };
+                
+                // 保存到数据库
+                await database.ref(`forums/${currentForum}/messages`).push(message);
+                
+                // 清空输入框
+                input.value = '';
+                input.focus();
+                
+                showToast('消息已发送', 'success');
+                
+            } catch (error) {
+                console.error('发送消息失败:', error);
+                showToast('发送失败，请重试', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '发送';
+            }
+        }
+        
+        // 更新在线状态
+        function updateOnlineStatus() {
+            const userStatusRef = database.ref(`status/${currentUser.uid}`);
+            const userInfoRef = database.ref(`users/${currentUser.uid}`);
+            
+            // 设置在线
+            userStatusRef.set({
+                online: true,
+                lastSeen: new Date().toISOString(),
+                forum: currentForum
+            });
+            
+            // 断开连接时设置为离线
+            userStatusRef.onDisconnect().set({
+                online: false,
+                lastSeen: new Date().toISOString()
+            });
+            
+            // 监听在线用户
+            onlineRef = database.ref('status');
+            onlineRef.on('value', (snapshot) => {
+                const users = [];
+                let onlineCount = 0;
+                
+                snapshot.forEach((childSnapshot) => {
+                    const data = childSnapshot.val();
+                    if (data.online) {
+                        onlineCount++;
+                        users.push({
+                            id: childSnapshot.key,
+                            ...data
+                        });
+                    }
+                });
+                
+                updateOnlineList(users);
+                document.getElementById('onlineCount').textContent = onlineCount;
+            });
+        }
+        
+        // 更新在线用户列表
+        async function updateOnlineList(users) {
+            const container = document.getElementById('onlineList');
+            let html = '';
+            
+            for (const user of users) {
+                try {
+                    // 获取用户名
+                    const userInfo = await database.ref('users/' + user.id).once('value');
+                    const userName = userInfo.val()?.name || '匿名用户';
+                    
+                    html += `
+                        <div class="online-user">
+                            <span class="online-dot">●</span>
+                            <span class="online-name">${userName}</span>
+                            <span class="online-forum">${getForumName(user.forum)}</span>
+                        </div>
+                    `;
+                } catch (error) {
+                    console.error('获取用户信息失败:', error);
+                }
+            }
+            
+            container.innerHTML = html || '<div class="no-users">暂无其他在线用户</div>';
+        }
+        
+        // 更新论坛在线人数
+        function updateForumOnlineCount() {
+            if (!onlineRef) return;
+            
+            onlineRef.once('value').then((snapshot) => {
+                let count = 0;
+                snapshot.forEach((childSnapshot) => {
+                    const data = childSnapshot.val();
+                    if (data.online && data.forum === currentForum) {
+                        count++;
+                    }
+                });
+                document.getElementById('forumOnlineCount').textContent = count;
+            });
+        }
+        
+        // 清空聊天
+        async function clearChat() {
+            if (!confirm('确定要清空当前论坛的所有聊天记录吗？此操作不可撤销！')) {
+                return;
+            }
+            
+            try {
+                showLoading(true);
+                await database.ref(`forums/${currentForum}/messages`).remove();
+                showToast('聊天记录已清空', 'success');
+            } catch (error) {
+                console.error('清空聊天失败:', error);
+                showToast('清空失败', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // 退出登录
+        async function logout() {
+            try {
+                showLoading(true);
+                
+                // 更新在线状态为离线
+                if (currentUser) {
+                    await database.ref(`status/${currentUser.uid}`).set({
+                        online: false,
+                        lastSeen: new Date().toISOString()
+                    });
+                }
+                
+                // Firebase 登出
+                await auth.signOut();
+                
+                // 清除本地存储
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                // 跳转到登录页
+                window.location.href = 'index.html';
+                
+            } catch (error) {
+                console.error('退出失败:', error);
+                showToast('退出失败，请重试', 'error');
+                showLoading(false);
+            }
+        }
+        
+        // 工具函数：显示加载状态
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'flex' : 'none';
+        }
+        
+        // 工具函数：显示提示
+        function showToast(message, type) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            toast.style.display = 'block';
+            
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+        
+        // 工具函数：转义 HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // 工具函数：获取论坛名称
+        function getForumName(forumId) {
+            const names = {
+                'general': '综合',
+                'study': '学习',
+                'fun': '娱乐'
+            };
+            return names[forumId] || '未知';
+        }
+        
+        // 工具函数：更新消息计数
+        function updateMessageCount(count) {
+            document.getElementById('messageCount').textContent = count;
+        }
+        
+    </script>
+</body>
+  </html>
