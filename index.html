@@ -95,8 +95,11 @@
                 return;
             }
             
+            // 🔑 编码中文用户名
+            const encodedName = encodeURIComponent(name);
+            
             // 检查用户名
-            const snapshot = await database.ref('usernames/' + name).once('value');
+            const snapshot = await database.ref('usernames/' + encodedName).once('value');
             if (snapshot.exists()) {
                 showMessage('名字已被使用', 'error');
                 return;
@@ -114,14 +117,15 @@
             // 保存到数据库
             await database.ref('users/' + userId).set({
                 name: name,
+                encodedName: encodedName,
                 passwordHash: passwordHash,
                 sessionToken: sessionToken,
                 createdAt: new Date().toISOString(),
                 lastLogin: new Date().toISOString()
             });
             
-            // 记录用户名
-            await database.ref('usernames/' + name).set(userId);
+            // 记录用户名（用编码名）
+            await database.ref('usernames/' + encodedName).set(userId);
             
             // 🔒 安全保存会话
             const sessionData = {
@@ -148,8 +152,11 @@
                 return;
             }
             
-            // 找用户ID
-            const idSnapshot = await database.ref('usernames/' + name).once('value');
+            // 🔑 编码中文用户名
+            const encodedName = encodeURIComponent(name);
+            
+            // 找用户ID（用编码名）
+            const idSnapshot = await database.ref('usernames/' + encodedName).once('value');
             if (!idSnapshot.exists()) {
                 showMessage('用户不存在', 'error');
                 return;
