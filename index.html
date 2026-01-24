@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>校园网 - 登录</title>
     <link rel="stylesheet" href="css/style.css">
-    <!-- 使用更稳定的 Firebase 7.24.0 版本 -->
     <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-database.js"></script>
@@ -58,6 +57,18 @@
             showMessage("系统初始化失败，请刷新页面重试", "error");
         }
 
+        // 获取用户IP地址
+        async function getUserIP() {
+            try {
+                const response = await fetch('https://api.ipify.org?format=json');
+                const data = await response.json();
+                return data.ip;
+            } catch (error) {
+                console.error('获取IP失败:', error);
+                return 'unknown_ip_' + Date.now();
+            }
+        }
+
         // 切换登录/注册表单
         function showRegister() {
             document.getElementById('loginForm').style.display = 'none';
@@ -95,12 +106,22 @@
                 return;
             }
             
-            // 🔑 编码中文用户名
+            // 获取用户IP
+            const userIP = await getUserIP();
+            
+            // 检查IP是否已注册
+            const ipCheckSnapshot = await database.ref('ip_registrations/' + userIP).once('value');
+            if (ipCheckSnapshot.exists()) {
+                showMessage('注册失败，请使用已注册账号登录', 'error');
+                return;
+            }
+            
+            // 编码中文用户名
             const encodedName = encodeURIComponent(name);
             
-            // 检查用户名
-            const snapshot = await database.ref('usernames/' + encodedName).once('value');
-            if (snapshot.exists()) {
+            // 检查用户名是否已存在
+            const nameSnapshot = await database.ref('usernames/' + encodedName).once('value');
+            if (nameSnapshot.exists()) {
                 showMessage('名字已被使用', 'error');
                 return;
             }
@@ -108,7 +129,7 @@
             // 生成用户ID
             const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
             
-            // 🔐 加密密码
+            // 加密密码
             const passwordHash = btoa(password + '|' + Date.now()).split('').reverse().join('');
             
             // 生成会话令牌
@@ -120,18 +141,27 @@
                 encodedName: encodedName,
                 passwordHash: passwordHash,
                 sessionToken: sessionToken,
+                ipAddress: userIP,
                 createdAt: new Date().toISOString(),
                 lastLogin: new Date().toISOString()
             });
             
-            // 记录用户名（用编码名）
+            // 记录用户名
             await database.ref('usernames/' + encodedName).set(userId);
             
-            // 🔒 安全保存会话
+            // 记录IP注册信息
+            await database.ref('ip_registrations/' + userIP).set({
+                userId: userId,
+                userName: name,
+                registeredAt: new Date().toISOString()
+            });
+            
+            // 安全保存会话
             const sessionData = {
                 userId: userId,
                 userName: name,
                 token: sessionToken,
+                ip: userIP,
                 expiry: Date.now() + 7 * 24 * 60 * 60 * 1000
             };
             localStorage.setItem('xiaoyuan_session', btoa(JSON.stringify(sessionData)));
@@ -152,10 +182,10 @@
                 return;
             }
             
-            // 🔑 编码中文用户名
+            // 编码中文用户名
             const encodedName = encodeURIComponent(name);
             
-            // 找用户ID（用编码名）
+            // 找用户ID
             const idSnapshot = await database.ref('usernames/' + encodedName).once('value');
             if (!idSnapshot.exists()) {
                 showMessage('用户不存在', 'error');
@@ -173,7 +203,7 @@
                 return;
             }
             
-            // 🔐 验证密码
+            // 验证密码
             try {
                 const reversedHash = userData.passwordHash.split('').reverse().join('');
                 const decoded = atob(reversedHash);
@@ -186,7 +216,7 @@
                 return;
             }
             
-            // 🔑 生成新会话令牌
+            // 生成新会话令牌
             const newSessionToken = btoa(userId + '|' + Date.now() + '|' + Math.random().toString(36));
             
             // 更新数据库中的令牌
@@ -195,11 +225,12 @@
                 lastLogin: new Date().toISOString()
             });
             
-            // 🔒 保存安全会话
+            // 安全保存会话
             const sessionData = {
                 userId: userId,
                 userName: name,
                 token: newSessionToken,
+                ip: userData.ipAddress || 'unknown',
                 expiry: Date.now() + 7 * 24 * 60 * 60 * 1000
             };
             localStorage.setItem('xiaoyuan_session', btoa(JSON.stringify(sessionData)));
