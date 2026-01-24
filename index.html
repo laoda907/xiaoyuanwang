@@ -63,8 +63,16 @@
                 return data.ip;
             } catch (error) {
                 console.log('获取IP失败，使用替代方案');
-                return 'local_' + Date.now();
+                return 'local_ip_' + Date.now();
             }
+        }
+
+        // 编码IP地址为Firebase安全路径
+        function encodeIPForFirebase(ip) {
+            // 先把IP转成base64
+            const base64 = btoa(ip);
+            // 替换base64中的非法字符
+            return base64.replace(/[\/+=]/g, '_');
         }
 
         // 切换登录/注册表单
@@ -91,13 +99,13 @@
 
         // ========== 注册功能 ==========
         async function registerUser() {
-            console.log('注册按钮被点击');
+            console.log('=== 开始注册 ===');
             
             const name = document.getElementById('registerName').value.trim();
             const password = document.getElementById('registerPassword').value;
             
-            console.log('输入的名字:', name);
-            console.log('输入的密码:', password ? '已输入' : '未输入');
+            console.log('用户名:', name);
+            console.log('密码长度:', password.length);
             
             // 验证
             if (!name) {
@@ -119,78 +127,61 @@
             
             showMessage('正在注册...', 'success');
             
-            // 获取用户IP
-            const userIP = await getUserIP();
-            console.log('用户IP:', userIP);
-            
-            // 修复：IP地址编码（去掉非法字符）
-            const encodedIP = userIP.replace(/[\.#\$\[\]]/g, '_');
-            console.log('编码后的IP:', encodedIP);
-            
-            // 检查IP是否已注册
             try {
+                // 1. 获取并编码IP
+                const userIP = await getUserIP();
+                console.log('原始IP:', userIP);
+                const encodedIP = encodeIPForFirebase(userIP);
+                console.log('编码后IP:', encodedIP);
+                
+                // 2. 检查IP是否已注册
                 const ipCheckSnapshot = await database.ref('ip_registrations/' + encodedIP).once('value');
                 if (ipCheckSnapshot.exists()) {
-                    alert('一个IP只能注册一个账号，请直接登录');
+                    alert('一个IP地址只能注册一个账号。\n如果你之前注册过，请直接登录。\n如果需要重新注册，请联系管理员。');
                     return;
                 }
-            } catch (error) {
-                console.log('IP检查跳过:', error);
-            }
-            
-            // 编码中文用户名
-            const encodedName = encodeURIComponent(name);
-            console.log('编码后的名字:', encodedName);
-            
-            // 检查用户名是否已存在
-            try {
+                
+                // 3. 检查用户名是否已存在
+                const encodedName = encodeURIComponent(name);
                 const nameSnapshot = await database.ref('usernames/' + encodedName).once('value');
                 if (nameSnapshot.exists()) {
-                    alert('名字已被使用');
+                    alert('名字 "' + name + '" 已被使用，请换一个名字');
                     return;
                 }
-            } catch (error) {
-                console.log('用户名检查出错:', error);
-                alert('检查用户名时出错');
-                return;
-            }
-            
-            // 生成用户ID
-            const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            console.log('生成用户ID:', userId);
-            
-            // 加密密码（简单版）
-            const passwordHash = btoa(password + '|' + Date.now()).split('').reverse().join('');
-            
-            // 生成会话令牌
-            const sessionToken = btoa(userId + '|' + Date.now() + '|' + Math.random().toString(36));
-            
-            try {
-                // 保存到数据库
-                console.log('正在保存到数据库...');
+                
+                // 4. 生成用户ID
+                const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                console.log('生成用户ID:', userId);
+                
+                // 5. 加密密码
+                const passwordHash = btoa(password + '|' + Date.now()).split('').reverse().join('');
+                
+                // 6. 生成会话令牌
+                const sessionToken = btoa(userId + '|' + Date.now() + '|' + Math.random().toString(36));
+                
+                // 7. 保存到数据库
                 await database.ref('users/' + userId).set({
                     name: name,
                     encodedName: encodedName,
                     passwordHash: passwordHash,
                     sessionToken: sessionToken,
                     ipAddress: userIP,
+                    encodedIP: encodedIP,
                     createdAt: new Date().toISOString(),
                     lastLogin: new Date().toISOString()
                 });
                 
                 await database.ref('usernames/' + encodedName).set(userId);
-                
-                // 修复：使用编码后的IP保存
                 await database.ref('ip_registrations/' + encodedIP).set({
                     userId: userId,
                     userName: name,
-                    ipAddress: userIP,
+                    originalIP: userIP,
                     registeredAt: new Date().toISOString()
                 });
                 
-                console.log('数据库保存成功');
+                console.log('✅ 数据库保存成功');
                 
-                // 安全保存会话
+                // 8. 安全保存会话
                 const sessionData = {
                     userId: userId,
                     userName: name,
@@ -201,22 +192,29 @@
                 localStorage.setItem('xiaoyuan_session', btoa(JSON.stringify(sessionData)));
                 
                 showMessage('🎉 注册成功！正在跳转...', 'success');
-                console.log('注册完成，跳转到主页');
                 
+                // 9. 跳转到主页
                 setTimeout(() => {
                     window.location.href = 'main.html';
                 }, 1500);
                 
             } catch (error) {
-                console.error('保存数据库时出错:', error);
-                alert('注册失败，请重试: ' + error.message);
+                console.error('注册失败:', error);
+                showMessage('注册失败: ' + error.message, 'error');
+                
+                // 显示更友好的错误提示
+                if (error.message.includes('invalid path')) {
+                    alert('系统错误：路径格式问题。请尝试换个名字或刷新页面重试。');
+                } else if (error.message.includes('permission')) {
+                    alert('数据库权限错误，请检查Firebase配置。');
+                } else {
+                    alert('注册失败：' + error.message + '\n请重试或联系管理员。');
+                }
             }
         }
 
         // ========== 登录功能 ==========
         async function loginUser() {
-            console.log('登录按钮被点击');
-            
             const name = document.getElementById('loginName').value.trim();
             const password = document.getElementById('loginPassword').value;
             
@@ -227,11 +225,11 @@
             
             showMessage('正在登录...', 'success');
             
-            // 编码中文用户名
-            const encodedName = encodeURIComponent(name);
-            
-            // 找用户ID
             try {
+                // 编码中文用户名
+                const encodedName = encodeURIComponent(name);
+                
+                // 找用户ID
                 const idSnapshot = await database.ref('usernames/' + encodedName).once('value');
                 if (!idSnapshot.exists()) {
                     alert('用户不存在');
