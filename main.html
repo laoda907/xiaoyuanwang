@@ -116,6 +116,35 @@
         let messagesRef = null;
         let onlineRef = null;
         
+        // 🔐 检查是否被封禁
+        async function checkIfBanned(userId) {
+            try {
+                const banSnapshot = await database.ref('bans/' + userId).once('value');
+                if (banSnapshot.exists()) {
+                    const banData = banSnapshot.val();
+                    
+                    // 检查封禁是否过期
+                    if (banData.unbanAt && new Date(banData.unbanAt) < new Date()) {
+                        // 封禁已过期，删除封禁记录
+                        await database.ref('bans/' + userId).remove();
+                        return false;
+                    }
+                    
+                    // 用户被封禁
+                    const unbanTime = banData.unbanAt ? 
+                        new Date(banData.unbanAt).toLocaleString('zh-CN') : 
+                        '永久';
+                    
+                    showToast(`你已被封禁！原因：${banData.reason}，解封时间：${unbanTime}`, 'error');
+                    return true;
+                }
+                return false;
+            } catch (error) {
+                console.error('检查封禁状态失败:', error);
+                return false;
+            }
+        }
+        
         // 🔐 安全验证函数
         async function checkAuth() {
             try {
@@ -147,6 +176,12 @@
                 if (userData.sessionToken !== sessionData.token) {
                     console.log('令牌不匹配');
                     throw new Error('安全验证失败，请重新登录');
+                }
+                
+                // 🔒 检查是否被封禁
+                const isBanned = await checkIfBanned(sessionData.userId);
+                if (isBanned) {
+                    throw new Error('账号已被封禁');
                 }
                 
                 // ✅ 验证通过，显示用户名
@@ -365,6 +400,12 @@
             const btn = document.getElementById('sendBtn');
             
             if (!text) return;
+            
+            // 🔒 检查是否被封禁
+            const isBanned = await checkIfBanned(currentUser.uid);
+            if (isBanned) {
+                return;
+            }
             
             // 禁用按钮防止重复发送
             btn.disabled = true;
