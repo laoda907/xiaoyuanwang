@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="css/style.css">
     <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-database.js"></script>
-    <script src="fix.js"></script>
     <style>
         /* 聊天页面样式 */
         * {
@@ -103,7 +102,7 @@
             background: #f8f9fa;
         }
         
-        .message {
+        .message-box {
             margin-bottom: 15px;
             padding: 12px 15px;
             background: white;
@@ -112,7 +111,7 @@
             max-width: 70%;
         }
         
-        .message.own {
+        .message-box.own {
             background: #e3f2fd;
             margin-left: auto;
         }
@@ -148,17 +147,20 @@
             gap: 10px;
         }
         
-        .message-input {
+        /* 修复输入框样式 */
+        #messageInput {
             flex: 1;
             padding: 12px 15px;
             border: 2px solid #e1e1e1;
             border-radius: 25px;
             font-size: 16px;
-            outline: none;
-            transition: border 0.3s;
+            font-family: inherit;
+            background: white;
+            color: #333;
         }
         
-        .message-input:focus {
+        #messageInput:focus {
+            outline: none;
             border-color: #3498db;
         }
         
@@ -290,7 +292,7 @@
             .sidebar-left {
                 width: 60px;
             }
-            .message {
+            .message-box {
                 max-width: 85%;
             }
         }
@@ -334,8 +336,7 @@
             
             <div class="input-area">
                 <div class="input-row">
-                    <input type="text" class="message-input" id="messageInput" 
-                           placeholder="输入消息..." maxlength="500">
+                    <input type="text" id="messageInput" placeholder="输入消息..." maxlength="500">
                     <button class="send-button" onclick="sendMessage()">发送</button>
                 </div>
             </div>
@@ -391,6 +392,7 @@
         
         // 页面加载
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('聊天页面加载');
             checkLogin();
         });
         
@@ -411,6 +413,7 @@
                 }
                 
                 currentUser = sessionData;
+                console.log('用户已登录:', currentUser.userName);
                 initChat();
                 
             } catch (error) {
@@ -428,6 +431,7 @@
                     firebase.initializeApp(firebaseConfig);
                 }
                 database = firebase.database();
+                console.log('Firebase 初始化成功');
                 
                 // 显示用户信息
                 document.getElementById('currentUserName').textContent = currentUser.userName;
@@ -450,9 +454,14 @@
                 // 设置事件监听
                 setupEventListeners();
                 
+                // 确保输入框可以输入
+                const input = document.getElementById('messageInput');
+                input.disabled = false;
+                input.focus();
+                
             } catch (error) {
                 console.error('初始化失败:', error);
-                alert('系统初始化失败，请刷新页面');
+                alert('系统初始化失败，请刷新页面: ' + error.message);
             }
         }
         
@@ -467,6 +476,7 @@
                     forum: currentForum,
                     lastSeen: new Date().toISOString()
                 });
+                console.log('更新用户状态:', online ? '在线' : '离线');
             } catch (error) {
                 console.error('更新状态失败:', error);
             }
@@ -474,6 +484,8 @@
         
         // 切换论坛
         function switchForum(forumId) {
+            console.log('切换论坛到:', forumId);
+            
             // 更新当前论坛
             currentForum = forumId;
             
@@ -516,6 +528,7 @@
             // 监听新消息
             messagesRef.limitToLast(50).on('child_added', snapshot => {
                 const message = snapshot.val();
+                console.log('收到新消息:', message.text);
                 emptyEl.style.display = 'none';
                 addMessageToUI(message, snapshot.key);
             });
@@ -537,7 +550,7 @@
             const isOwn = message.userId === currentUser.userId;
             
             const messageEl = document.createElement('div');
-            messageEl.className = `message ${isOwn ? 'own' : ''}`;
+            messageEl.className = `message-box ${isOwn ? 'own' : ''}`;
             messageEl.id = `msg_${messageId}`;
             messageEl.dataset.messageId = messageId;
             
@@ -571,10 +584,12 @@
             const input = document.getElementById('messageInput');
             const text = input.value.trim();
             
-            if (!text) return;
+            if (!text) {
+                alert('请输入消息内容');
+                return;
+            }
             
-            // 禁用输入框和按钮
-            input.disabled = true;
+            console.log('发送消息:', text);
             
             try {
                 const messageRef = database.ref('forums/' + currentForum + '/messages').push();
@@ -587,6 +602,8 @@
                     forum: currentForum
                 });
                 
+                console.log('消息发送成功');
+                
                 // 清空输入框
                 input.value = '';
                 
@@ -595,9 +612,8 @@
                 
             } catch (error) {
                 console.error('发送消息失败:', error);
-                alert('发送失败，请重试');
+                alert('发送失败，请重试: ' + error.message);
             } finally {
-                input.disabled = false;
                 input.focus();
             }
         }
@@ -644,6 +660,8 @@
         
         // 设置事件监听
         function setupEventListeners() {
+            console.log('设置事件监听');
+            
             // 论坛切换
             document.querySelectorAll('.nav-item[data-forum]').forEach(item => {
                 item.addEventListener('click', () => {
@@ -652,9 +670,17 @@
                 });
             });
             
+            // 输入框监听
+            const input = document.getElementById('messageInput');
+            
+            // 确保可以输入
+            input.addEventListener('input', function(e) {
+                console.log('输入框内容:', e.target.value);
+            });
+            
             // 回车发送消息
-            document.getElementById('messageInput').addEventListener('keypress', e => {
-                if (e.key === 'Enter' && !e.shiftKey) {
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
                     e.preventDefault();
                     sendMessage();
                 }
@@ -663,6 +689,7 @@
             // 页面关闭时设置离线状态
             window.addEventListener('beforeunload', () => {
                 if (currentUser) {
+                    console.log('页面关闭，设置离线状态');
                     updateUserStatus(false);
                 }
             });
@@ -696,4 +723,4 @@
         }
     </script>
 </body>
-              </html>
+</html>
