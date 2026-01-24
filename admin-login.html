@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校园网 - 后台管理</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-database.js"></script>
+    <style>
+        .admin-login {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 40px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        
+        .admin-login h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .admin-login .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .admin-login input {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: 2px solid #e1e1e1;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        
+        .admin-login button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        
+        .admin-login button:hover {
+            opacity: 0.9;
+        }
+        
+        .admin-hint {
+            color: #666;
+            font-size: 12px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .admin-hint code {
+            background: #f1f1f1;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-login">
+        <h1>🔐 后台管理</h1>
+        <p class="subtitle">校园网聊天平台管理系统</p>
+        
+        <div class="form-container">
+            <h2>管理员登录</h2>
+            <input type="text" id="adminKey" placeholder="管理员密钥">
+            <input type="password" id="adminPassword" placeholder="管理员密码">
+            <button onclick="adminLogin()">进入后台</button>
+            
+            <div class="admin-hint">
+                <p>默认密钥：<code>admin2024</code></p>
+                <p>默认密码：<code>xiaoyuan123</code></p>
+                <p>请在后台中修改默认密码</p>
+            </div>
+            
+            <div id="message" class="message"></div>
+        </div>
+    </div>
+
+    <script>
+        // ========== Firebase 配置 ==========
+        const firebaseConfig = {
+            apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
+            authDomain: "laoda907-22511.firebaseapp.com",
+            databaseURL: "https://laoda907-22511-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "laoda907-22511",
+            storageBucket: "laoda907-22511.firebasestorage.app",
+            messagingSenderId: "176173610464",
+            appId: "1:176173610464:web:3ff86202f9b05f24b36785"
+        };
+
+        // 初始化 Firebase
+        let database;
+        try {
+            firebase.initializeApp(firebaseConfig);
+            database = firebase.database();
+            console.log("✅ Firebase 初始化成功");
+        } catch (error) {
+            console.error("❌ Firebase 初始化失败:", error);
+        }
+
+        // 显示消息
+        function showMessage(text, type) {
+            const msgDiv = document.getElementById('message');
+            msgDiv.textContent = text;
+            msgDiv.className = 'message ' + type;
+        }
+
+        // 管理员登录
+        async function adminLogin() {
+            const adminKey = document.getElementById('adminKey').value.trim();
+            const adminPassword = document.getElementById('adminPassword').value;
+            
+            if (!adminKey || !adminPassword) {
+                showMessage('请输入密钥和密码', 'error');
+                return;
+            }
+            
+            try {
+                // 检查管理员配置
+                const adminConfigRef = database.ref('admin/config');
+                const snapshot = await adminConfigRef.once('value');
+                let adminConfig = snapshot.val();
+                
+                // 如果不存在，创建默认配置
+                if (!adminConfig) {
+                    adminConfig = {
+                        adminKey: 'admin2024',
+                        adminPassword: 'xiaoyuan123',
+                        lastModified: new Date().toISOString()
+                    };
+                    await adminConfigRef.set(adminConfig);
+                }
+                
+                // 验证
+                if (adminKey === adminConfig.adminKey && adminPassword === adminConfig.adminPassword) {
+                    // 生成管理员会话
+                    const sessionToken = btoa('admin|' + Date.now() + '|' + Math.random().toString(36));
+                    const sessionData = {
+                        isAdmin: true,
+                        token: sessionToken,
+                        loginTime: new Date().toISOString(),
+                        expiry: Date.now() + 2 * 60 * 60 * 1000 // 2小时有效期
+                    };
+                    
+                    localStorage.setItem('admin_session', btoa(JSON.stringify(sessionData)));
+                    
+                    showMessage('✅ 登录成功，跳转中...', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'admin-panel.html';
+                    }, 1000);
+                } else {
+                    showMessage('❌ 密钥或密码错误', 'error');
+                }
+                
+            } catch (error) {
+                console.error('管理员登录失败:', error);
+                showMessage('登录失败，请重试', 'error');
+            }
+        }
+        
+        // 按Enter键登录
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                adminLogin();
+            }
+        });
+    </script>
+</body>
+</html>
