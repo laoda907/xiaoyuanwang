@@ -256,6 +256,7 @@
                 try {
                     const reversedHash = userData.passwordHash.split('').reverse().join('');
                     const decoded = atob(reversedHash);
+                    const decodedPassword = decodeURIComponent(decoded)
                     const parts = decoded.split('|');
                     if (parts[0] !== password) {
                         alert('密码错误');
