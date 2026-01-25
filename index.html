@@ -161,7 +161,7 @@
                 const userId = 'user_' + Date.now();
                 
                 // 5. 简单密码加密
-                const passwordHash = btoa(password + '|' + Date.now()).split('').reverse().join('');
+                const passwordHash = btoa(encodeURIComponen(password + '|' + Date.now())).split('').reverse().join('');
                 
                 // 6. 生成会话令牌
                 const sessionToken = btoa(userId + '|' + Date.now());
