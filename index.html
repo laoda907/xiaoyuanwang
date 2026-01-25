@@ -160,8 +160,9 @@
                 // 4. 生成用户ID
                 const userId = 'user_' + Date.now();
                 
-                // 5. 简单密码加密
-                const passwordHash = btoa(encodeURIComponen(password + '|' + Date.now())).split('').reverse().join('');
+                // ✅ 修复：支持中文密码加密
+                // 5. 简单密码加密（支持中文）
+                const passwordHash = btoa(encodeURIComponent(password + '|' + Date.now())).split('').reverse().join('');
                 
                 // 6. 生成会话令牌
                 const sessionToken = btoa(userId + '|' + Date.now());
@@ -252,12 +253,12 @@
                     return;
                 }
                 
-                // 验证密码
+                // ✅ 修复：验证密码（支持中文）
                 try {
                     const reversedHash = userData.passwordHash.split('').reverse().join('');
                     const decoded = atob(reversedHash);
-                    const decodedPassword = decodeURIComponent(decoded)
-                    const parts = decoded.split('|');
+                    const decodedStr = decodeURIComponent(decoded);
+                    const parts = decodedStr.split('|');
                     if (parts[0] !== password) {
                         alert('密码错误');
                         return;
@@ -313,4 +314,4 @@
         });
     </script>
 </body>
-</html>
+    </html>
