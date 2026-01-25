@@ -158,8 +158,33 @@
                 // 4. 生成用户ID
                 const userId = 'user_' + Date.now();
                 
-                // 5. 简单密码加密（修复中文支持）
-                const passwordHash = btoa(encodeURIComponent(password + '|' + Date.now())).split('').reverse().join('');
+                // 5. 修复中文密码编码问题 - 使用UTF-8编码
+                function encodePassword(str) {
+                    // 先转换为UTF-8字节数组
+                    const utf8Bytes = [];
+                    for (let i = 0; i < str.length; i++) {
+                        let charCode = str.charCodeAt(i);
+                        if (charCode < 128) {
+                            utf8Bytes.push(charCode);
+                        } else if (charCode < 2048) {
+                            utf8Bytes.push(192 | (charCode >> 6));
+                            utf8Bytes.push(128 | (charCode & 63));
+                        } else {
+                            utf8Bytes.push(224 | (charCode >> 12));
+                            utf8Bytes.push(128 | ((charCode >> 6) & 63));
+                            utf8Bytes.push(128 | (charCode & 63));
+                        }
+                    }
+                    // 转换为Base64
+                    let binary = '';
+                    for (let i = 0; i < utf8Bytes.length; i++) {
+                        binary += String.fromCharCode(utf8Bytes[i]);
+                    }
+                    return btoa(binary);
+                }
+                
+                // 生成密码哈希
+                const passwordHash = encodePassword(password + '|' + Date.now()).split('').reverse().join('');
                 
                 // 6. 生成会话令牌
                 const sessionToken = btoa(userId + '|' + Date.now());
@@ -243,11 +268,23 @@
                     return;
                 }
                 
-                // 验证密码（修复中文支持）
+                // 验证密码 - 使用相同的UTF-8解码方式
+                function decodePassword(encodedStr) {
+                    // 反转回来
+                    const reversedStr = encodedStr.split('').reverse().join('');
+                    // 解码Base64
+                    const binary = atob(reversedStr);
+                    // 转换为UTF-8字符串
+                    const utf8Bytes = new Uint8Array(binary.length);
+                    for (let i = 0; i < binary.length; i++) {
+                        utf8Bytes[i] = binary.charCodeAt(i);
+                    }
+                    // 转换为字符串
+                    return new TextDecoder('utf-8').decode(utf8Bytes);
+                }
+                
                 try {
-                    const reversedHash = userData.passwordHash.split('').reverse().join('');
-                    const decoded = atob(reversedHash);
-                    const decodedStr = decodeURIComponent(decoded);
+                    const decodedStr = decodePassword(userData.passwordHash);
                     const parts = decodedStr.split('|');
                     if (parts[0] !== password) {
                         alert('密码错误');
