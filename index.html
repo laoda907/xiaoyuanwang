@@ -55,7 +55,7 @@
             showMessage("系统初始化失败，请刷新页面重试", "error");
         }
 
-        // 获取用户IP地址（简化版）
+        // 获取用户IP地址
         async function getUserIP() {
             try {
                 const response = await fetch('https://api.ipify.org?format=json');
@@ -67,16 +67,12 @@
             }
         }
 
-        // ✅ 100%有效的IP编码方案
+        // IP编码方案
         function encodeIPForFirebase(ip) {
-            // 方法1：用最安全的方式编码IP
-            // 把IP地址的每个部分用下划线连接
             const parts = ip.split('.');
             if (parts.length === 4) {
-                // 标准IP格式：3.38.144.177 → ip_3_38_144_177
                 return 'ip_' + parts.join('_');
             } else {
-                // 非标准IP：直接替换所有非法字符
                 return 'ip_' + ip.replace(/[\.#\$\[\]\s]/g, '_');
             }
         }
@@ -87,6 +83,7 @@
             document.getElementById('registerForm').style.display = 'block';
             clearMessage();
         }
+        
         function showLogin() {
             document.getElementById('registerForm').style.display = 'none';
             document.getElementById('loginForm').style.display = 'block';
@@ -99,6 +96,7 @@
             msgDiv.textContent = text;
             msgDiv.className = 'message ' + type;
         }
+        
         function clearMessage() {
             showMessage('', '');
         }
@@ -160,8 +158,7 @@
                 // 4. 生成用户ID
                 const userId = 'user_' + Date.now();
                 
-                // ✅ 修复：支持中文密码加密
-                // 5. 简单密码加密（支持中文）
+                // 5. 简单密码加密（修复中文支持）
                 const passwordHash = btoa(encodeURIComponent(password + '|' + Date.now())).split('').reverse().join('');
                 
                 // 6. 生成会话令牌
@@ -188,7 +185,6 @@
                 });
                 
                 console.log('✅ 数据库保存成功');
-                console.log('Firebase路径:', 'ip_registrations/' + encodedIP);
                 
                 // 8. 安全保存会话
                 const sessionData = {
@@ -209,13 +205,7 @@
                 
             } catch (error) {
                 console.error('注册失败:', error);
-                
-                // 显示友好的错误提示
-                if (error.message.includes('invalid path')) {
-                    alert('系统错误：路径问题。\nIP: ' + userIP + '\n编码后: ' + encodedIP + '\n错误: ' + error.message);
-                } else {
-                    alert('注册失败：' + error.message);
-                }
+                alert('注册失败：' + error.message);
             }
         }
 
@@ -253,7 +243,7 @@
                     return;
                 }
                 
-                // ✅ 修复：验证密码（支持中文）
+                // 验证密码（修复中文支持）
                 try {
                     const reversedHash = userData.passwordHash.split('').reverse().join('');
                     const decoded = atob(reversedHash);
@@ -314,4 +304,4 @@
         });
     </script>
 </body>
-    </html>
+</html>
