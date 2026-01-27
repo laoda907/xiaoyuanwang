@@ -153,6 +153,20 @@
     </div>
 
     <script>
+        // ========= 安全Base64解码（修复中文乱码）=========
+        function safeAtob(str) {
+            try {
+                return decodeURIComponent(
+                    atob(str).split('').map(function (c) {
+                        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                    }).join('')
+                );
+            } catch (e) {
+                console.error('解码失败:', e);
+                return null;
+            }
+        }
+
         // 检查是否已登录
         document.addEventListener('DOMContentLoaded', function() {
             const sessionStr = localStorage.getItem('xiaoyuan_session');
@@ -164,8 +178,13 @@
             }
             
             try {
-                // 解析会话数据
-                const sessionData = JSON.parse(atob(sessionStr));
+                // 解析会话数据 - 使用安全解码
+                const decodedStr = safeAtob(sessionStr);
+                if (!decodedStr) {
+                    throw new Error('解码失败');
+                }
+                
+                const sessionData = JSON.parse(decodedStr);
                 
                 // 检查会话是否过期
                 if (Date.now() > sessionData.expiry) {
