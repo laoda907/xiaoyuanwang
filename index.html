@@ -43,11 +43,22 @@ function safeBtoa(str) {
 }
 
 function safeAtob(str) {
-    return decodeURIComponent(
-        atob(str).split('').map(function (c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join('')
-    );
+    try {
+        return decodeURIComponent(
+            atob(str).split('').map(function (c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join('')
+        );
+    } catch (e) {
+        console.error('解码失败:', e);
+        return null;
+    }
+}
+
+/* ========= 用户名安全编码（修复检查问题）========= */
+function encodeUsername(name) {
+    // 创建一个安全的用户名编码，避免Firebase路径问题
+    return 'name_' + btoa(encodeURIComponent(name)).replace(/[+/=]/g, '_');
 }
 
 /* ========= Firebase 配置 ========= */
@@ -107,6 +118,28 @@ async function checkIPRegistered(userIP) {
     }
 }
 
+/* ========= 检查用户名是否存在 ========= */
+async function checkUsernameExists(name) {
+    try {
+        // 查询所有用户，检查是否有相同的用户名
+        const usersRef = database.ref('users');
+        const snapshot = await usersRef.once('value');
+        
+        if (snapshot.exists()) {
+            const users = snapshot.val();
+            for (let userId in users) {
+                if (users[userId].name === name) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    } catch (error) {
+        console.error('检查用户名失败:', error);
+        return true; // 出错时认为用户名存在，避免重复注册
+    }
+}
+
 /* ========= 注册 ========= */
 async function registerUser() {
     const name = registerName.value.trim();
@@ -114,6 +147,11 @@ async function registerUser() {
 
     if (!name || !password) {
         alert('请输入用户名和密码');
+        return;
+    }
+
+    if (name.length > 8) {
+        alert('用户名不能超过8个字符');
         return;
     }
 
@@ -131,10 +169,11 @@ async function registerUser() {
         return;
     }
 
-    const encodedName = encodeURIComponent(name);
-    const nameSnap = await database.ref('usernames/' + encodedName).once('value');
-    if (nameSnap.exists()) {
-        alert('用户名已存在');
+    // 检查用户名是否存在
+    const usernameExists = await checkUsernameExists(name);
+    if (usernameExists) {
+        alert('用户名已存在，请换一个名字');
+        showMessage('', '');
         return;
     }
 
@@ -149,6 +188,7 @@ async function registerUser() {
         userIP: userIP
     };
 
+    // 存储用户信息
     await database.ref('users/' + userId).set({
         name,
         passwordHash,
@@ -157,7 +197,11 @@ async function registerUser() {
         lastLogin: new Date().toISOString()
     });
     
+    // 存储用户名到用户ID的映射（使用安全编码）
+    const encodedName = encodeUsername(name);
     await database.ref('usernames/' + encodedName).set(userId);
+    
+    // 记录IP注册信息
     await database.ref('ip_registrations/' + userIP).set({
         userId: userId,
         registeredAt: new Date().toISOString(),
@@ -180,19 +224,31 @@ async function loginUser() {
         return;
     }
 
-    const encodedName = encodeURIComponent(name);
-    const idSnap = await database.ref('usernames/' + encodedName).once('value');
-    if (!idSnap.exists()) {
+    // 通过查询找到用户ID
+    let userId = null;
+    const usersRef = database.ref('users');
+    const snapshot = await usersRef.once('value');
+    
+    if (snapshot.exists()) {
+        const users = snapshot.val();
+        for (let id in users) {
+            if (users[id].name === name) {
+                userId = id;
+                break;
+            }
+        }
+    }
+    
+    if (!userId) {
         alert('用户不存在');
         return;
     }
 
-    const userId = idSnap.val();
     const userSnap = await database.ref('users/' + userId).once('value');
     const user = userSnap.val();
 
     const decoded = safeAtob(user.passwordHash.split('').reverse().join(''));
-    if (!decoded.startsWith(password)) {
+    if (!decoded || !decoded.startsWith(password)) {
         alert('密码错误');
         return;
     }
