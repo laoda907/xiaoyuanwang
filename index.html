@@ -33,12 +33,20 @@
 </div>
 
 <script>
-/* ========= 中文安全 Base64（核心修复）========= */
+/* ========= 安全Base64函数（修复中文）========= */
 function safeBtoa(str) {
     return btoa(
         encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function (_, p1) {
             return String.fromCharCode('0x' + p1);
         })
+    );
+}
+
+function safeAtob(str) {
+    return decodeURIComponent(
+        atob(str).split('').map(function (c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join('')
     );
 }
 
@@ -57,6 +65,19 @@ let database;
 firebase.initializeApp(firebaseConfig);
 database = firebase.database();
 
+/* ========= 获取用户IP ========= */
+async function getUserIP() {
+    try {
+        const response = await fetch('https://api.ipify.org?format=json');
+        const data = await response.json();
+        return data.ip;
+    } catch (error) {
+        console.error('获取IP失败:', error);
+        // 备用方法
+        return 'unknown_' + Math.random().toString(36).substr(2, 9);
+    }
+}
+
 /* ========= 工具函数 ========= */
 function showMessage(text, type) {
     const msg = document.getElementById('message');
@@ -74,6 +95,18 @@ function showLogin() {
     showMessage('', '');
 }
 
+/* ========= 检查IP是否已注册 ========= */
+async function checkIPRegistered(userIP) {
+    try {
+        const ipRef = database.ref('ip_registrations/' + userIP);
+        const snapshot = await ipRef.once('value');
+        return snapshot.exists();
+    } catch (error) {
+        console.error('检查IP失败:', error);
+        return false;
+    }
+}
+
 /* ========= 注册 ========= */
 async function registerUser() {
     const name = registerName.value.trim();
@@ -86,6 +119,18 @@ async function registerUser() {
 
     showMessage('正在注册...', 'success');
 
+    // 获取用户IP
+    const userIP = await getUserIP();
+    console.log('用户IP:', userIP);
+    
+    // 检查IP是否已注册
+    const isIPRegistered = await checkIPRegistered(userIP);
+    if (isIPRegistered) {
+        alert('该IP地址已注册过账号，每个IP只能注册一个账号！');
+        showMessage('', '');
+        return;
+    }
+
     const encodedName = encodeURIComponent(name);
     const nameSnap = await database.ref('usernames/' + encodedName).once('value');
     if (nameSnap.exists()) {
@@ -93,24 +138,32 @@ async function registerUser() {
         return;
     }
 
-    const userId = 'user_' + Date.now();
+    const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
     const passwordHash = safeBtoa(password + '|' + Date.now()).split('').reverse().join('');
 
     const sessionData = {
         userId,
         userName: name,
-        expiry: Date.now() + 7 * 24 * 60 * 60 * 1000
+        expiry: Date.now() + 7 * 24 * 60 * 60 * 1000,
+        userIP: userIP
     };
 
     await database.ref('users/' + userId).set({
         name,
         passwordHash,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        userIP: userIP,
+        lastLogin: new Date().toISOString()
     });
+    
     await database.ref('usernames/' + encodedName).set(userId);
+    await database.ref('ip_registrations/' + userIP).set({
+        userId: userId,
+        registeredAt: new Date().toISOString(),
+        userName: name
+    });
 
-    /* 🔥 关键修复点：不用 btoa，用 safeBtoa */
     localStorage.setItem('xiaoyuan_session', safeBtoa(JSON.stringify(sessionData)));
 
     showMessage('🎉 注册成功，正在跳转...', 'success');
@@ -138,7 +191,7 @@ async function loginUser() {
     const userSnap = await database.ref('users/' + userId).once('value');
     const user = userSnap.val();
 
-    const decoded = atob(user.passwordHash.split('').reverse().join(''));
+    const decoded = safeAtob(user.passwordHash.split('').reverse().join(''));
     if (!decoded.startsWith(password)) {
         alert('密码错误');
         return;
@@ -147,11 +200,16 @@ async function loginUser() {
     const sessionData = {
         userId,
         userName: name,
-        expiry: Date.now() + 7 * 24 * 60 * 60 * 1000
+        expiry: Date.now() + 7 * 24 * 60 * 60 * 1000,
+        userIP: user.userIP || 'unknown'
     };
 
-    /* 🔥 同样修复 */
     localStorage.setItem('xiaoyuan_session', safeBtoa(JSON.stringify(sessionData)));
+
+    // 更新最后登录时间
+    await database.ref('users/' + userId).update({
+        lastLogin: new Date().toISOString()
+    });
 
     showMessage('登录成功，跳转中...', 'success');
     setTimeout(() => location.href = 'main.html', 800);
