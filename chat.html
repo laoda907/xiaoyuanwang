@@ -382,6 +382,7 @@
         let currentUser = null;
         let currentForum = 'general';
         let messagesRef = null;
+        let statusRef = null;
         
         // 论坛映射
         const forumNames = {
@@ -389,6 +390,26 @@
             'study': '学习交流',
             'fun': '休闲娱乐'
         };
+
+        // ========== 工具函数 ==========
+        function safeAtob(str) {
+            try {
+                return decodeURIComponent(
+                    atob(str).split('').map(function (c) {
+                        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                    }).join('')
+                );
+            } catch (e) {
+                console.error('解码失败:', e);
+                return null;
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
 
         // 页面加载
         document.addEventListener('DOMContentLoaded', function() {
@@ -405,7 +426,12 @@
             }
             
             try {
-                const sessionData = JSON.parse(safeAtob(sessionStr));
+                const decodedStr = safeAtob(sessionStr);
+                if (!decodedStr) {
+                    throw new Error('解码失败');
+                }
+                
+                const sessionData = JSON.parse(decodedStr);
                 if (Date.now() > sessionData.expiry) {
                     localStorage.removeItem('xiaoyuan_session');
                     window.location.href = 'index.html';
@@ -468,14 +494,26 @@
         // 更新用户状态
         async function updateUserStatus(online) {
             try {
+                if (!currentUser) return;
+                
                 const statusRef = database.ref('status/' + currentUser.userId);
-                await statusRef.set({
+                const userData = {
                     userId: currentUser.userId,
                     userName: currentUser.userName,
                     online: online,
                     forum: currentForum,
                     lastSeen: new Date().toISOString()
-                });
+                };
+                
+                if (online) {
+                    await statusRef.set(userData);
+                } else {
+                    await statusRef.update({ 
+                        online: false,
+                        lastSeen: new Date().toISOString() 
+                    });
+                }
+                
                 console.log('更新用户状态:', online ? '在线' : '离线');
             } catch (error) {
                 console.error('更新状态失败:', error);
@@ -508,6 +546,9 @@
             if (currentUser) {
                 updateUserStatus(true);
             }
+            
+            // 更新在线用户列表
+            loadUsers();
         }
 
         // 加载消息
@@ -536,6 +577,17 @@
             // 监听消息删除
             messagesRef.on('child_removed', snapshot => {
                 removeMessageFromUI(snapshot.key);
+            });
+            
+            // 加载历史消息
+            messagesRef.limitToLast(50).once('value', snapshot => {
+                if (snapshot.exists()) {
+                    emptyEl.style.display = 'none';
+                    snapshot.forEach(childSnapshot => {
+                        const message = childSnapshot.val();
+                        addMessageToUI(message, childSnapshot.key);
+                    });
+                }
             });
         }
 
@@ -586,6 +638,13 @@
             
             if (!text) {
                 alert('请输入消息内容');
+                input.focus();
+                return;
+            }
+            
+            if (!currentUser) {
+                alert('请先登录');
+                window.location.href = 'index.html';
                 return;
             }
             
@@ -606,5 +665,110 @@
                 
                 // 清空输入框
                 input.value = '';
+                input.focus();
                 
                 // 更新用户最后活动
+                await updateUserStatus(true);
+                
+            } catch (error) {
+                console.error('发送消息失败:', error);
+                alert('发送失败: ' + error.message);
+            }
+        }
+
+        // 加载在线用户
+        function loadUsers() {
+            const usersList = document.getElementById('usersList');
+            const userCountEl = document.getElementById('userCount');
+            const onlineCountEl = document.getElementById('onlineCount');
+            
+            // 清空用户列表
+            usersList.innerHTML = '';
+            
+            // 监听在线用户
+            const usersRef = database.ref('status');
+            
+            usersRef.on('value', snapshot => {
+                const users = [];
+                snapshot.forEach(childSnapshot => {
+                    const user = childSnapshot.val();
+                    if (user.online && user.forum === currentForum) {
+                        users.push(user);
+                    }
+                });
+                
+                // 更新计数
+                userCountEl.textContent = users.length;
+                onlineCountEl.textContent = users.length;
+                
+                // 显示用户列表
+                if (users.length === 0) {
+                    usersList.innerHTML = '<div class="empty-state"><p>暂无在线用户</p></div>';
+                } else {
+                    users.forEach(user => {
+                        const userItem = document.createElement('div');
+                        userItem.className = 'user-item';
+                        userItem.innerHTML = `
+                            <div class="user-avatar">${user.userName.charAt(0).toUpperCase()}</div>
+                            <div class="user-info">
+                                <div class="user-name">${escapeHtml(user.userName)}</div>
+                                <div class="user-status">在线</div>
+                            </div>
+                            <div class="status-indicator"></div>
+                        `;
+                        usersList.appendChild(userItem);
+                    });
+                }
+            });
+        }
+
+        // 设置事件监听
+        function setupEventListeners() {
+            // 论坛切换
+            document.querySelectorAll('.nav-item[data-forum]').forEach(item => {
+                item.addEventListener('click', function() {
+                    const forumId = this.getAttribute('data-forum');
+                    switchForum(forumId);
+                });
+            });
+            
+            // 输入框回车发送
+            document.getElementById('messageInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+            
+            // 页面关闭时更新状态
+            window.addEventListener('beforeunload', function() {
+                updateUserStatus(false);
+            });
+            
+            // 页面可见性变化
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    updateUserStatus(false);
+                } else {
+                    updateUserStatus(true);
+                }
+            });
+        }
+
+        // 打开设置（占位函数）
+        function openSettings() {
+            alert('设置功能开发中...');
+        }
+
+        // 退出登录
+        function logout() {
+            if (confirm('确定要退出登录吗？')) {
+                // 更新状态为离线
+                updateUserStatus(false).then(() => {
+                    localStorage.removeItem('xiaoyuan_session');
+                    window.location.href = 'index.html';
+                });
+            }
+        }
+    </script>
+</body>
+</html>
