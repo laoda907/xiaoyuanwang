@@ -33,7 +33,7 @@
 </div>
 
 <script>
-/* ========= 安全Base64函数（修复中文）========= */
+/* ========= 安全Base64函数 ========= */
 function safeBtoa(str) {
     return btoa(
         encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function (_, p1) {
@@ -55,12 +55,6 @@ function safeAtob(str) {
     }
 }
 
-/* ========= 用户名安全编码（修复检查问题）========= */
-function encodeUsername(name) {
-    // 创建一个安全的用户名编码，避免Firebase路径问题
-    return 'name_' + btoa(encodeURIComponent(name)).replace(/[+/=]/g, '_');
-}
-
 /* ========= Firebase 配置 ========= */
 const firebaseConfig = {
     apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
@@ -79,13 +73,21 @@ database = firebase.database();
 /* ========= 获取用户IP ========= */
 async function getUserIP() {
     try {
+        // 先尝试使用ipify.org
         const response = await fetch('https://api.ipify.org?format=json');
         const data = await response.json();
         return data.ip;
     } catch (error) {
-        console.error('获取IP失败:', error);
-        // 备用方法
-        return 'unknown_' + Math.random().toString(36).substr(2, 9);
+        try {
+            // 备用API
+            const response = await fetch('https://api64.ipify.org?format=json');
+            const data = await response.json();
+            return data.ip;
+        } catch (error2) {
+            console.error('获取IP失败:', error2);
+            // 生成一个随机ID作为备用
+            return 'ip_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
     }
 }
 
@@ -106,37 +108,66 @@ function showLogin() {
     showMessage('', '');
 }
 
-/* ========= 检查IP是否已注册 ========= */
-async function checkIPRegistered(userIP) {
-    try {
-        const ipRef = database.ref('ip_registrations/' + userIP);
-        const snapshot = await ipRef.once('value');
-        return snapshot.exists();
-    } catch (error) {
-        console.error('检查IP失败:', error);
-        return false;
+/* ========= 清理数据库（临时函数，成功后可以删除）========= */
+function cleanDatabase() {
+    if (confirm('确定要清空数据库吗？这将删除所有用户数据！')) {
+        database.ref().remove()
+            .then(() => {
+                alert('数据库已清空，现在可以正常注册了！');
+                location.reload();
+            })
+            .catch(error => {
+                console.error('清空数据库失败:', error);
+                alert('清空失败: ' + error.message);
+            });
     }
 }
 
-/* ========= 检查用户名是否存在 ========= */
+// 添加清理按钮（测试完成后可以删除）
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.querySelector('.auth-container');
+    const cleanBtn = document.createElement('button');
+    cleanBtn.textContent = '🧹 清空数据库（调试用）';
+    cleanBtn.style.marginTop = '10px';
+    cleanBtn.style.padding = '5px 10px';
+    cleanBtn.style.background = '#ff6b6b';
+    cleanBtn.style.color = 'white';
+    cleanBtn.style.border = 'none';
+    cleanBtn.style.borderRadius = '5px';
+    cleanBtn.style.cursor = 'pointer';
+    cleanBtn.onclick = cleanDatabase;
+    container.appendChild(cleanBtn);
+});
+
+/* ========= 检查用户名是否存在（新版）========= */
 async function checkUsernameExists(name) {
     try {
-        // 查询所有用户，检查是否有相同的用户名
+        // 查询所有用户
         const usersRef = database.ref('users');
         const snapshot = await usersRef.once('value');
         
-        if (snapshot.exists()) {
-            const users = snapshot.val();
-            for (let userId in users) {
-                if (users[userId].name === name) {
-                    return true;
-                }
+        if (!snapshot.exists()) {
+            console.log('数据库中没有用户，用户名可用');
+            return false;
+        }
+        
+        const users = snapshot.val();
+        let exists = false;
+        
+        // 遍历所有用户，检查用户名
+        for (let userId in users) {
+            if (users[userId].name === name) {
+                console.log('找到重复用户名:', name);
+                exists = true;
+                break;
             }
         }
-        return false;
+        
+        return exists;
     } catch (error) {
         console.error('检查用户名失败:', error);
-        return true; // 出错时认为用户名存在，避免重复注册
+        // 出错时返回false，让注册继续
+        return false;
     }
 }
 
@@ -155,27 +186,39 @@ async function registerUser() {
         return;
     }
 
-    showMessage('正在注册...', 'success');
+    showMessage('正在检查用户名...', 'success');
 
+    // 检查用户名是否存在
+    const usernameExists = await checkUsernameExists(name);
+    if (usernameExists) {
+        alert('用户名 "' + name + '" 已存在，请换一个名字');
+        showMessage('', '');
+        registerName.focus();
+        registerName.select();
+        return;
+    }
+
+    showMessage('正在获取IP地址...', 'success');
+    
     // 获取用户IP
     const userIP = await getUserIP();
     console.log('用户IP:', userIP);
     
     // 检查IP是否已注册
-    const isIPRegistered = await checkIPRegistered(userIP);
-    if (isIPRegistered) {
-        alert('该IP地址已注册过账号，每个IP只能注册一个账号！');
-        showMessage('', '');
-        return;
+    try {
+        const ipRef = database.ref('ip_registrations/' + userIP);
+        const ipSnap = await ipRef.once('value');
+        
+        if (ipSnap.exists()) {
+            alert('该IP地址已注册过账号，每个IP只能注册一个账号！');
+            showMessage('', '');
+            return;
+        }
+    } catch (error) {
+        console.error('检查IP失败:', error);
     }
 
-    // 检查用户名是否存在
-    const usernameExists = await checkUsernameExists(name);
-    if (usernameExists) {
-        alert('用户名已存在，请换一个名字');
-        showMessage('', '');
-        return;
-    }
+    showMessage('正在创建账号...', 'success');
 
     const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
@@ -188,30 +231,33 @@ async function registerUser() {
         userIP: userIP
     };
 
-    // 存储用户信息
-    await database.ref('users/' + userId).set({
-        name,
-        passwordHash,
-        createdAt: new Date().toISOString(),
-        userIP: userIP,
-        lastLogin: new Date().toISOString()
-    });
-    
-    // 存储用户名到用户ID的映射（使用安全编码）
-    const encodedName = encodeUsername(name);
-    await database.ref('usernames/' + encodedName).set(userId);
-    
-    // 记录IP注册信息
-    await database.ref('ip_registrations/' + userIP).set({
-        userId: userId,
-        registeredAt: new Date().toISOString(),
-        userName: name
-    });
+    try {
+        // 存储用户信息
+        await database.ref('users/' + userId).set({
+            name: name,
+            passwordHash: passwordHash,
+            createdAt: new Date().toISOString(),
+            userIP: userIP,
+            lastLogin: new Date().toISOString()
+        });
+        
+        // 记录IP注册信息
+        await database.ref('ip_registrations/' + userIP).set({
+            userId: userId,
+            registeredAt: new Date().toISOString(),
+            userName: name
+        });
 
-    localStorage.setItem('xiaoyuan_session', safeBtoa(JSON.stringify(sessionData)));
+        localStorage.setItem('xiaoyuan_session', safeBtoa(JSON.stringify(sessionData)));
 
-    showMessage('🎉 注册成功，正在跳转...', 'success');
-    setTimeout(() => location.href = 'main.html', 1200);
+        showMessage('🎉 注册成功，正在跳转...', 'success');
+        setTimeout(() => location.href = 'main.html', 1200);
+        
+    } catch (error) {
+        console.error('注册失败:', error);
+        alert('注册失败: ' + error.message);
+        showMessage('', '');
+    }
 }
 
 /* ========= 登录 ========= */
@@ -224,32 +270,54 @@ async function loginUser() {
         return;
     }
 
-    // 通过查询找到用户ID
+    showMessage('正在登录...', 'success');
+
+    // 查询所有用户，找到匹配的用户名
     let userId = null;
-    const usersRef = database.ref('users');
-    const snapshot = await usersRef.once('value');
+    let userData = null;
     
-    if (snapshot.exists()) {
+    try {
+        const usersRef = database.ref('users');
+        const snapshot = await usersRef.once('value');
+        
+        if (!snapshot.exists()) {
+            alert('用户不存在');
+            return;
+        }
+        
         const users = snapshot.val();
+        let found = false;
+        
         for (let id in users) {
             if (users[id].name === name) {
                 userId = id;
+                userData = users[id];
+                found = true;
                 break;
             }
         }
-    }
-    
-    if (!userId) {
-        alert('用户不存在');
+        
+        if (!found) {
+            alert('用户不存在');
+            return;
+        }
+        
+    } catch (error) {
+        console.error('查询用户失败:', error);
+        alert('登录失败: ' + error.message);
         return;
     }
 
-    const userSnap = await database.ref('users/' + userId).once('value');
-    const user = userSnap.val();
-
-    const decoded = safeAtob(user.passwordHash.split('').reverse().join(''));
-    if (!decoded || !decoded.startsWith(password)) {
-        alert('密码错误');
+    // 验证密码
+    try {
+        const decoded = safeAtob(userData.passwordHash.split('').reverse().join(''));
+        if (!decoded || !decoded.startsWith(password)) {
+            alert('密码错误');
+            return;
+        }
+    } catch (error) {
+        console.error('密码验证失败:', error);
+        alert('密码验证失败');
         return;
     }
 
@@ -257,15 +325,19 @@ async function loginUser() {
         userId,
         userName: name,
         expiry: Date.now() + 7 * 24 * 60 * 60 * 1000,
-        userIP: user.userIP || 'unknown'
+        userIP: userData.userIP || 'unknown'
     };
 
     localStorage.setItem('xiaoyuan_session', safeBtoa(JSON.stringify(sessionData)));
 
     // 更新最后登录时间
-    await database.ref('users/' + userId).update({
-        lastLogin: new Date().toISOString()
-    });
+    try {
+        await database.ref('users/' + userId).update({
+            lastLogin: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('更新登录时间失败:', error);
+    }
 
     showMessage('登录成功，跳转中...', 'success');
     setTimeout(() => location.href = 'main.html', 800);
