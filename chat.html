@@ -147,7 +147,7 @@
             gap: 10px;
         }
         
-        /* 修复输入框样式 */
+        /* 修复输入框样式 - 关键修复 */
         #messageInput {
             flex: 1;
             padding: 12px 15px;
@@ -157,11 +157,33 @@
             font-family: inherit;
             background: white;
             color: #333;
+            -webkit-user-select: text !important;
+            user-select: text !important;
+            -webkit-user-modify: read-write !important;
+            -webkit-tap-highlight-color: transparent;
         }
         
         #messageInput:focus {
             outline: none;
             border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+        }
+        
+        /* 修复输入框在移动端的显示 */
+        #messageInput::-webkit-input-placeholder {
+            color: #999;
+        }
+        
+        #messageInput::-moz-placeholder {
+            color: #999;
+        }
+        
+        #messageInput:-ms-input-placeholder {
+            color: #999;
+        }
+        
+        #messageInput::-webkit-textfield-decoration-container {
+            background-color: transparent;
         }
         
         .send-button {
@@ -174,6 +196,7 @@
             font-weight: 600;
             cursor: pointer;
             transition: background 0.3s;
+            -webkit-tap-highlight-color: transparent;
         }
         
         .send-button:hover {
@@ -295,6 +318,18 @@
             .message-box {
                 max-width: 85%;
             }
+            
+            #messageInput {
+                font-size: 16px; /* 确保移动端字体大小合适 */
+                padding: 14px 16px; /* 加大内边距便于点击 */
+            }
+        }
+        
+        /* 修复输入框的CSS Bug */
+        input[type="text"] {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
         }
     </style>
 </head>
@@ -336,7 +371,7 @@
             
             <div class="input-area">
                 <div class="input-row">
-                    <input type="text" id="messageInput" placeholder="输入消息..." maxlength="500">
+                    <input type="text" id="messageInput" placeholder="输入消息..." maxlength="500" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
                     <button class="send-button" onclick="sendMessage()">发送</button>
                 </div>
             </div>
@@ -389,6 +424,7 @@ function encodeIPForFirebase(ip) {
         let messagesRef = null;
         let statusRef = null;
         let isComposing = false; // 新增：标记是否正在输入法输入中
+        let inputFixTimer = null; // 输入框修复定时器
         
         // 论坛映射
         const forumNames = {
@@ -416,11 +452,36 @@ function encodeIPForFirebase(ip) {
             div.textContent = text;
             return div.innerHTML;
         }
+        
+        // 修复输入框显示问题的函数
+        function fixInputDisplay() {
+            const input = document.getElementById('messageInput');
+            if (!input) return;
+            
+            // 确保输入框可编辑
+            input.readOnly = false;
+            input.disabled = false;
+            
+            // 清除可能影响显示的内联样式
+            input.style.opacity = '1';
+            input.style.color = '#333';
+            input.style.backgroundColor = 'white';
+            input.style.pointerEvents = 'auto';
+            
+            // 强制重新渲染
+            input.blur();
+            setTimeout(() => {
+                input.focus();
+            }, 10);
+        }
 
         // 页面加载
         document.addEventListener('DOMContentLoaded', function() {
             console.log('聊天页面加载');
             checkLogin();
+            
+            // 页面加载完成后修复输入框
+            setTimeout(fixInputDisplay, 500);
         });
         
         // 检查登录状态
@@ -489,7 +550,13 @@ function encodeIPForFirebase(ip) {
                 // 确保输入框可以输入
                 const input = document.getElementById('messageInput');
                 input.disabled = false;
-                input.focus();
+                input.readOnly = false;
+                
+                // 延迟聚焦以确保输入框正常工作
+                setTimeout(() => {
+                    input.focus();
+                    fixInputDisplay();
+                }, 300);
                 
             } catch (error) {
                 console.error('初始化失败:', error);
@@ -555,6 +622,9 @@ function encodeIPForFirebase(ip) {
             
             // 更新在线用户列表
             loadUsers();
+            
+            // 修复输入框显示
+            setTimeout(fixInputDisplay, 100);
         }
 
         // 加载消息
@@ -637,13 +707,15 @@ function encodeIPForFirebase(ip) {
             }
         }
 
-        // 发送消息
+        // 发送消息 - 修复版本
         async function sendMessage() {
-            // 等待一小段时间确保输入框值稳定
-            await new Promise(resolve => setTimeout(resolve, 50));
+            // 清除修复定时器
+            if (inputFixTimer) {
+                clearTimeout(inputFixTimer);
+            }
             
             const input = document.getElementById('messageInput');
-            // 确保获取最新的输入框值
+            // 确保获取正确的输入框值
             const text = input.value.trim();
             
             if (!text) {
@@ -673,9 +745,14 @@ function encodeIPForFirebase(ip) {
                 
                 console.log('消息发送成功');
                 
-                // 清空输入框
+                // 清空输入框并重置
                 input.value = '';
-                input.focus();
+                
+                // 确保输入框可以继续输入
+                setTimeout(() => {
+                    input.focus();
+                    fixInputDisplay();
+                }, 50);
                 
                 // 更新用户最后活动
                 await updateUserStatus(true);
@@ -755,19 +832,38 @@ function encodeIPForFirebase(ip) {
                 isComposing = false;
             });
             
-            // 输入框回车发送 - 修复版本
-            input.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    // 如果正在使用输入法输入中，不要立即发送
+            // 输入框获得焦点时修复显示
+            input.addEventListener('focus', function() {
+                fixInputDisplay();
+            });
+            
+            // 输入框点击时修复显示
+            input.addEventListener('click', function() {
+                fixInputDisplay();
+            });
+            
+            // 输入框输入时定期修复显示
+            input.addEventListener('input', function() {
+                if (inputFixTimer) {
+                    clearTimeout(inputFixTimer);
+                }
+                inputFixTimer = setTimeout(fixInputDisplay, 1000);
+            });
+            
+            // 输入框回车发送 - 简化版本
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault(); // 防止默认行为
+                    
+                    // 如果正在使用输入法，等待输入完成
                     if (isComposing) {
                         return;
                     }
-                    e.preventDefault(); // 防止默认行为
                     
                     // 延迟发送，确保输入框值稳定
                     setTimeout(() => {
                         sendMessage();
-                    }, 100);
+                    }, 50);
                 }
             });
             
@@ -782,8 +878,13 @@ function encodeIPForFirebase(ip) {
                     updateUserStatus(false);
                 } else {
                     updateUserStatus(true);
+                    // 页面重新激活时修复输入框
+                    setTimeout(fixInputDisplay, 200);
                 }
             });
+            
+            // 定期检查并修复输入框
+            setInterval(fixInputDisplay, 30000); // 每30秒检查一次
         }
 
         // 打开设置（占位函数）
@@ -803,4 +904,4 @@ function encodeIPForFirebase(ip) {
         }
     </script>
 </body>
-</html>
+    </html>
