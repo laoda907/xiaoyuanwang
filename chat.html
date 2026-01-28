@@ -8,7 +8,7 @@
     <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-database.js"></script>
     <style>
-        /* 聊天页面样式 */
+        /* 聊天页面样式 - 原始样式保持 */
         * {
             margin: 0;
             padding: 0;
@@ -147,7 +147,6 @@
             gap: 10px;
         }
         
-        /* 修复输入框样式 */
         #messageInput {
             flex: 1;
             padding: 12px 15px;
@@ -366,11 +365,11 @@
     </div>
 
     <script>
-// ========= 安全IP编码（修复Firebase路径问题）=========
+// ========= 安全IP编码 =========
 function encodeIPForFirebase(ip) {
-    // 将IP中的点替换为下划线，确保Firebase路径安全
     return ip.replace(/\./g, "_");
 }
+
         // ========== Firebase 配置 ==========
         const firebaseConfig = {
             apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
@@ -388,7 +387,7 @@ function encodeIPForFirebase(ip) {
         let currentForum = 'general';
         let messagesRef = null;
         let statusRef = null;
-        let isComposing = false; // 新增：标记是否正在输入法输入中
+        // 移除 isComposing 和相关变量
         
         // 论坛映射
         const forumNames = {
@@ -637,13 +636,9 @@ function encodeIPForFirebase(ip) {
             }
         }
 
-        // 发送消息
+        // 发送消息 - 简化版本
         async function sendMessage() {
-            // 等待一小段时间确保输入框值稳定
-            await new Promise(resolve => setTimeout(resolve, 50));
-            
             const input = document.getElementById('messageInput');
-            // 确保获取最新的输入框值
             const text = input.value.trim();
             
             if (!text) {
@@ -732,7 +727,7 @@ function encodeIPForFirebase(ip) {
             });
         }
 
-        // 设置事件监听
+        // 设置事件监听 - 修复版本
         function setupEventListeners() {
             // 论坛切换
             document.querySelectorAll('.nav-item[data-forum]').forEach(item => {
@@ -745,29 +740,11 @@ function encodeIPForFirebase(ip) {
             // 获取输入框元素
             const input = document.getElementById('messageInput');
             
-            // 监听输入法开始（中文输入时）
-            input.addEventListener('compositionstart', function() {
-                isComposing = true;
-            });
-            
-            // 监听输入法结束
-            input.addEventListener('compositionend', function() {
-                isComposing = false;
-            });
-            
-            // 输入框回车发送 - 修复版本
-            input.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    // 如果正在使用输入法输入中，不要立即发送
-                    if (isComposing) {
-                        return;
-                    }
-                    e.preventDefault(); // 防止默认行为
-                    
-                    // 延迟发送，确保输入框值稳定
-                    setTimeout(() => {
-                        sendMessage();
-                    }, 100);
+            // 输入框回车发送 - 使用 keydown 事件
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
                 }
             });
             
@@ -803,4 +780,4 @@ function encodeIPForFirebase(ip) {
         }
     </script>
 </body>
-    </html>
+</html>
