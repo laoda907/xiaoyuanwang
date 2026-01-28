@@ -8,7 +8,7 @@
     <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-database.js"></script>
     <style>
-        /* 聊天页面样式 - 保持不变 */
+        /* 聊天页面样式 */
         * {
             margin: 0;
             padding: 0;
@@ -147,7 +147,7 @@
             gap: 10px;
         }
         
-        /* 输入框样式 */
+        /* 修复输入框样式 */
         #messageInput {
             flex: 1;
             padding: 12px 15px;
@@ -296,14 +296,6 @@
                 max-width: 85%;
             }
         }
-        
-        /* 输入提示 */
-        .typing-indicator {
-            color: #666;
-            font-size: 12px;
-            padding: 5px 15px;
-            display: none;
-        }
     </style>
 </head>
 <body>
@@ -342,10 +334,6 @@
                 </div>
             </div>
             
-            <div class="typing-indicator" id="typingIndicator">
-                正在输入...
-            </div>
-            
             <div class="input-area">
                 <div class="input-row">
                     <input type="text" id="messageInput" placeholder="输入消息..." maxlength="500">
@@ -378,11 +366,11 @@
     </div>
 
     <script>
-// ========= 安全IP编码 =========
+// ========= 安全IP编码（修复Firebase路径问题）=========
 function encodeIPForFirebase(ip) {
+    // 将IP中的点替换为下划线，确保Firebase路径安全
     return ip.replace(/\./g, "_");
 }
-
         // ========== Firebase 配置 ==========
         const firebaseConfig = {
             apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
@@ -400,10 +388,7 @@ function encodeIPForFirebase(ip) {
         let currentForum = 'general';
         let messagesRef = null;
         let statusRef = null;
-        let isComposing = false; // 是否正在输入法输入
-        let lastInputText = ''; // 上次输入的文本
-        let sendTimeout = null; // 发送超时
-        let typingTimeout = null; // 输入提示超时
+        let isComposing = false; // 新增：标记是否正在输入法输入中
         
         // 论坛映射
         const forumNames = {
@@ -430,64 +415,6 @@ function encodeIPForFirebase(ip) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
-        }
-        
-        // 智能文本修正函数 - 修复文字顺序问题
-        function fixTextOrder(text) {
-            if (!text) return text;
-            
-            // 常见错乱模式检测和修复
-            const patterns = [
-                // 检测并修复 "踊跃发言" -> "发言踊跃" 这类问题
-                { pattern: /(\S+)(\S+)$/, fix: (match, p1, p2) => {
-                    // 如果最后两个字符看起来是反的，就调换它们
-                    if (p1 && p2 && p1.length <= 3 && p2.length <= 3) {
-                        // 检查是否是常见的中文词语
-                        const commonPairs = ['踊跃', '发言', '来了', '是的', '好的', '看看'];
-                        const original = p1 + p2;
-                        const swapped = p2 + p1;
-                        
-                        // 如果调换后是更常见的词语，就调换
-                        for (let pair of commonPairs) {
-                            if (swapped === pair) {
-                                console.log('修复词语顺序:', original, '->', swapped);
-                                return swapped;
-                            }
-                        }
-                    }
-                    return original;
-                }},
-                
-                // 修复数字在中间的错乱 "666老大复活了" -> "老大复活了666"
-                { pattern: /(\d+)([\u4e00-\u9fa5]+)(\d*)$/, fix: (match, p1, p2, p3) => {
-                    // 如果数字在中间，移到末尾
-                    if (p1 && p2) {
-                        const fixed = p2 + p1 + (p3 || '');
-                        console.log('修复数字位置:', match[0], '->', fixed);
-                        return fixed;
-                    }
-                    return match[0];
-                }},
-            ];
-            
-            let fixedText = text;
-            for (let {pattern, fix} of patterns) {
-                if (pattern.test(fixedText)) {
-                    fixedText = fixedText.replace(pattern, fix);
-                }
-            }
-            
-            // 如果修正后的文本和上次相同，说明可能是正常的，不修正
-            if (fixedText !== text && fixedText === lastInputText) {
-                console.log('文本与上次相同，可能是正常输入，不修正');
-                return text;
-            }
-            
-            if (fixedText !== text) {
-                console.log('文本修正:', text, '->', fixedText);
-            }
-            
-            return fixedText;
         }
 
         // 页面加载
@@ -710,33 +637,14 @@ function encodeIPForFirebase(ip) {
             }
         }
 
-        // 发送消息 - 关键修复版本
+        // 发送消息
         async function sendMessage() {
-            // 清除超时
-            if (sendTimeout) {
-                clearTimeout(sendTimeout);
-            }
+            // 等待一小段时间确保输入框值稳定
+            await new Promise(resolve => setTimeout(resolve, 50));
             
             const input = document.getElementById('messageInput');
-            
-            // 等待输入法完成
-            await new Promise(resolve => {
-                if (isComposing) {
-                    console.log('等待输入法完成...');
-                    setTimeout(resolve, 200);
-                } else {
-                    resolve();
-                }
-            });
-            
-            // 获取并修正文本
-            let text = input.value.trim();
-            
-            // 应用文本修正
-            const fixedText = fixTextOrder(text);
-            if (fixedText !== text) {
-                text = fixedText;
-            }
+            // 确保获取最新的输入框值
+            const text = input.value.trim();
             
             if (!text) {
                 alert('请输入消息内容');
@@ -767,15 +675,7 @@ function encodeIPForFirebase(ip) {
                 
                 // 清空输入框
                 input.value = '';
-                lastInputText = ''; // 重置上次输入文本
-                
-                // 隐藏输入提示
-                document.getElementById('typingIndicator').style.display = 'none';
-                
-                // 重新聚焦
-                setTimeout(() => {
-                    input.focus();
-                }, 50);
+                input.focus();
                 
                 // 更新用户最后活动
                 await updateUserStatus(true);
@@ -832,7 +732,7 @@ function encodeIPForFirebase(ip) {
             });
         }
 
-        // 设置事件监听 - 关键修复
+        // 设置事件监听
         function setupEventListeners() {
             // 论坛切换
             document.querySelectorAll('.nav-item[data-forum]').forEach(item => {
@@ -845,70 +745,29 @@ function encodeIPForFirebase(ip) {
             // 获取输入框元素
             const input = document.getElementById('messageInput');
             
-            // 关键修复：正确处理输入法事件
+            // 监听输入法开始（中文输入时）
             input.addEventListener('compositionstart', function() {
-                console.log('输入法开始');
                 isComposing = true;
             });
             
-            input.addEventListener('compositionupdate', function(e) {
-                // 保存当前输入法文本
-                lastInputText = e.data || '';
-                console.log('输入法更新:', lastInputText);
-            });
-            
-            input.addEventListener('compositionend', function(e) {
-                console.log('输入法结束');
+            // 监听输入法结束
+            input.addEventListener('compositionend', function() {
                 isComposing = false;
-                
-                // 输入法结束后，等一小段时间再获取最终值
-                setTimeout(() => {
-                    const finalText = input.value;
-                    if (finalText !== lastInputText) {
-                        console.log('最终文本:', finalText);
-                        lastInputText = finalText;
-                    }
-                }, 100);
-            });
-            
-            // 输入事件 - 记录文本用于修正
-            input.addEventListener('input', function(e) {
-                const text = input.value;
-                if (!isComposing) {
-                    lastInputText = text;
-                }
-                
-                // 显示输入提示
-                if (text.trim()) {
-                    document.getElementById('typingIndicator').style.display = 'block';
-                    if (typingTimeout) clearTimeout(typingTimeout);
-                    typingTimeout = setTimeout(() => {
-                        document.getElementById('typingIndicator').style.display = 'none';
-                    }, 2000);
-                }
             });
             
             // 输入框回车发送 - 修复版本
-            input.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    
-                    // 如果是输入法状态，先结束输入法
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    // 如果正在使用输入法输入中，不要立即发送
                     if (isComposing) {
-                        console.log('回车时正在输入法输入，等待输入法结束');
-                        // 触发compositionend
-                        const event = new CompositionEvent('compositionend', {
-                            data: input.value
-                        });
-                        input.dispatchEvent(event);
-                        isComposing = false;
+                        return;
                     }
+                    e.preventDefault(); // 防止默认行为
                     
-                    // 延迟发送，确保输入法完全结束
-                    if (sendTimeout) clearTimeout(sendTimeout);
-                    sendTimeout = setTimeout(() => {
+                    // 延迟发送，确保输入框值稳定
+                    setTimeout(() => {
                         sendMessage();
-                    }, 150);
+                    }, 100);
                 }
             });
             
@@ -944,4 +803,4 @@ function encodeIPForFirebase(ip) {
         }
     </script>
 </body>
-                </html>
+    </html>
