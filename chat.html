@@ -388,6 +388,7 @@ function encodeIPForFirebase(ip) {
         let currentForum = 'general';
         let messagesRef = null;
         let statusRef = null;
+        let isComposing = false; // 新增：标记是否正在输入法输入中
         
         // 论坛映射
         const forumNames = {
@@ -638,7 +639,11 @@ function encodeIPForFirebase(ip) {
 
         // 发送消息
         async function sendMessage() {
+            // 等待一小段时间确保输入框值稳定
+            await new Promise(resolve => setTimeout(resolve, 50));
+            
             const input = document.getElementById('messageInput');
+            // 确保获取最新的输入框值
             const text = input.value.trim();
             
             if (!text) {
@@ -737,10 +742,32 @@ function encodeIPForFirebase(ip) {
                 });
             });
             
-            // 输入框回车发送
-            document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            // 获取输入框元素
+            const input = document.getElementById('messageInput');
+            
+            // 监听输入法开始（中文输入时）
+            input.addEventListener('compositionstart', function() {
+                isComposing = true;
+            });
+            
+            // 监听输入法结束
+            input.addEventListener('compositionend', function() {
+                isComposing = false;
+            });
+            
+            // 输入框回车发送 - 修复版本
+            input.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
-                    sendMessage();
+                    // 如果正在使用输入法输入中，不要立即发送
+                    if (isComposing) {
+                        return;
+                    }
+                    e.preventDefault(); // 防止默认行为
+                    
+                    // 延迟发送，确保输入框值稳定
+                    setTimeout(() => {
+                        sendMessage();
+                    }, 100);
                 }
             });
             
