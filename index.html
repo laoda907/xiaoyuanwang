@@ -24,9 +24,10 @@
     <div class="form-container" id="registerForm" style="display:none;">
         <h2>注册新账号</h2>
         <input type="text" id="registerName" placeholder="取个名字（最多8字）" maxlength="8">
-        <input type="password" id="registerPassword" placeholder="设置密码">
+        <input type="password" id="registerPassword" placeholder="密码(6-10位，字母和数字组合)">
         <button onclick="registerUser()">注册</button>
         <p class="switch-text">已有账号？ <a href="#" onclick="showLogin()">点此登录</a></p>
+        <p style="font-size: 12px; color: #666; margin-top: 10px;">密码要求：6-10位，必须包含字母和数字</p>
     </div>
 
     <div id="message" class="message"></div>
@@ -59,6 +60,30 @@ function safeAtob(str) {
 function encodeIPForFirebase(ip) {
     // 将IP中的点替换为下划线，确保Firebase路径安全
     return ip.replace(/\./g, "_");
+}
+
+/* ========= 密码验证函数 ========= */
+function validatePassword(password) {
+    // 密码长度检查：6-10位
+    if (password.length < 6 || password.length > 10) {
+        return { valid: false, message: '密码长度必须在6到10位之间' };
+    }
+    
+    // 检查是否包含字母和数字
+    const hasLetter = /[a-zA-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    
+    if (!hasLetter || !hasNumber) {
+        return { valid: false, message: '密码必须同时包含字母和数字' };
+    }
+    
+    // 检查是否只包含字母和数字（可选，根据你的要求）
+    const onlyLettersAndNumbers = /^[a-zA-Z0-9]+$/.test(password);
+    if (!onlyLettersAndNumbers) {
+        return { valid: false, message: '密码只能包含字母和数字' };
+    }
+    
+    return { valid: true, message: '密码格式正确' };
 }
 
 /* ========= Firebase 配置 ========= */
@@ -155,6 +180,15 @@ async function registerUser() {
 
     if (name.length > 8) {
         alert('用户名不能超过8个字符');
+        return;
+    }
+
+    // 验证密码格式
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+        alert('密码错误：' + passwordValidation.message);
+        registerPassword.focus();
+        registerPassword.select();
         return;
     }
 
@@ -288,30 +322,6 @@ async function loginUser() {
     showMessage('登录成功，跳转中...', 'success');
     setTimeout(() => location.href = 'main.html', 800);
 }
-
-/* ========= 清空数据库（调试用）========= */
-function cleanDatabase() {
-    if (confirm('确定要清空数据库吗？这将删除所有用户数据！')) {
-        database.ref().remove()
-            .then(() => {
-                alert('数据库已清空，现在可以正常注册了！');
-            })
-            .catch(error => {
-                console.error('清空数据库失败:', error);
-                alert('清空失败: ' + error.message);
-            });
-    }
-}
-
-// 添加清理按钮（测试完成后可以删除）
-document.addEventListener('DOMContentLoaded', function() {
-    const container = document.querySelector('.auth-container');
-    const cleanBtn = document.createElement('button');
-    cleanBtn.textContent = '🧹 清空数据库（调试用）';
-    cleanBtn.style.cssText = 'margin-top:10px; padding:5px 10px; background:#ff6b6b; color:white; border:none; border-radius:5px; cursor:pointer;';
-    cleanBtn.onclick = cleanDatabase;
-    container.appendChild(cleanBtn);
-});
 </script>
 </body>
 </html>
