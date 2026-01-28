@@ -366,6 +366,11 @@
     </div>
 
     <script>
+// ========= 安全IP编码（修复Firebase路径问题）=========
+function encodeIPForFirebase(ip) {
+    // 将IP中的点替换为下划线，确保Firebase路径安全
+    return ip.replace(/\./g, "_");
+}
         // ========== Firebase 配置 ==========
         const firebaseConfig = {
             apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
