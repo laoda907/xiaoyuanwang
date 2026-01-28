@@ -8,12 +8,11 @@
     <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-database.js"></script>
     <style>
-        /* 聊天页面样式 */
+        /* 聊天页面样式 - 简化的CSS */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
         }
         
         body {
@@ -148,7 +147,7 @@
             gap: 10px;
         }
         
-        /* 输入框样式 - 关键修复 */
+        /* 简化的输入框样式 */
         #messageInput {
             flex: 1;
             padding: 12px 15px;
@@ -157,60 +156,22 @@
             font-size: 16px;
             font-family: inherit;
             background: white;
-            color: #333 !important;
-            -webkit-appearance: none !important;
-            -moz-appearance: none !important;
-            appearance: none !important;
-            outline: none !important;
-            -webkit-user-select: text !important;
-            -moz-user-select: text !important;
-            -ms-user-select: text !important;
-            user-select: text !important;
-            -webkit-user-modify: read-write !important;
-            -moz-user-modify: read-write !important;
-            -ms-user-modify: read-write !important;
-            user-modify: read-write !important;
-            -webkit-tap-highlight-color: transparent;
-            -webkit-text-fill-color: #333 !important;
-            opacity: 1 !important;
-            caret-color: #3498db;
-            min-height: 44px; /* 提高可点击区域 */
+            color: #333;
+            /* 只保留必要的样式 */
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
         }
         
         #messageInput:focus {
             border-color: #3498db;
-            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
         }
         
-        #messageInput::placeholder {
-            color: #999;
-            -webkit-text-fill-color: #999;
-            opacity: 1;
-        }
-        
-        /* 修复移动端输入框 */
-        @media (-webkit-min-device-pixel-ratio: 0) {
-            #messageInput {
-                -webkit-text-size-adjust: 100%;
-            }
-        }
-        
-        /* 禁用输入框默认样式 */
+        /* 修复输入框显示的基本样式 */
         input[type="text"] {
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            border-radius: 0;
-        }
-        
-        /* 移除输入框的自动填充样式 */
-        input:-webkit-autofill,
-        input:-webkit-autofill:hover,
-        input:-webkit-autofill:focus,
-        input:-webkit-autofill:active {
-            -webkit-box-shadow: 0 0 0 30px white inset !important;
-            -webkit-text-fill-color: #333 !important;
-            transition: background-color 5000s ease-in-out 0s;
+            user-select: text;
+            -webkit-user-select: text;
+            cursor: text;
         }
         
         .send-button {
@@ -223,8 +184,6 @@
             font-weight: 600;
             cursor: pointer;
             transition: background 0.3s;
-            -webkit-tap-highlight-color: transparent;
-            min-height: 44px; /* 提高可点击区域 */
         }
         
         .send-button:hover {
@@ -357,24 +316,7 @@
             
             #messageInput {
                 font-size: 16px;
-                padding: 14px 16px;
-                min-height: 48px;
             }
-            
-            .send-button {
-                min-height: 48px;
-                padding: 14px 25px;
-            }
-        }
-        
-        /* 修复输入框的强制样式 */
-        input {
-            -webkit-touch-callout: default !important;
-            -webkit-user-select: text !important;
-            -khtml-user-select: text !important;
-            -moz-user-select: text !important;
-            -ms-user-select: text !important;
-            user-select: text !important;
         }
     </style>
 </head>
@@ -421,8 +363,7 @@
             <div class="input-area">
                 <div class="input-row">
                     <input type="text" id="messageInput" placeholder="输入消息..." maxlength="500"
-                           autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-                           inputmode="text" enterkeyhint="send">
+                           autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
                     <button class="send-button" onclick="sendMessage()">发送</button>
                 </div>
             </div>
@@ -478,7 +419,6 @@ function encodeIPForFirebase(ip) {
         let lastInputText = '';
         let sendTimeout = null;
         let typingTimeout = null;
-        let inputFixInterval = null; // 输入框修复定时器
         
         // 论坛映射
         const forumNames = {
@@ -507,39 +447,23 @@ function encodeIPForFirebase(ip) {
             return div.innerHTML;
         }
         
-        // 强制修复输入框显示
-        function forceFixInputDisplay() {
+        // 简单的输入框修复
+        function fixInputBox() {
             const input = document.getElementById('messageInput');
             if (!input) return;
             
-            // 强制重置输入框样式和状态
-            input.style.color = '#333';
-            input.style.opacity = '1';
-            input.style.backgroundColor = 'white';
-            input.style.visibility = 'visible';
-            input.style.display = 'block';
-            input.style.zIndex = '10';
-            input.style.position = 'relative';
-            
-            // 确保可编辑
+            // 确保输入框可点击和可编辑
+            input.style.pointerEvents = 'auto';
+            input.style.cursor = 'text';
             input.readOnly = false;
             input.disabled = false;
             
-            // 强制重绘
-            input.blur();
-            setTimeout(() => {
-                input.focus();
-                // 强制设置值以触发重绘
-                const currentValue = input.value;
-                if (currentValue) {
-                    input.value = '';
-                    setTimeout(() => {
-                        input.value = currentValue;
-                    }, 10);
-                }
-            }, 10);
+            // 确保显示
+            input.style.opacity = '1';
+            input.style.visibility = 'visible';
+            input.style.display = 'block';
             
-            console.log('输入框强制修复完成');
+            console.log('输入框修复完成');
         }
         
         // 智能文本修正函数
@@ -656,17 +580,13 @@ function encodeIPForFirebase(ip) {
                 // 设置事件监听
                 setupEventListeners();
                 
-                // 强制修复输入框显示
+                // 初始输入框修复
                 setTimeout(() => {
-                    forceFixInputDisplay();
-                    
-                    // 定期检查并修复输入框
-                    inputFixInterval = setInterval(() => {
-                        const input = document.getElementById('messageInput');
-                        if (input && (input.style.opacity === '0' || input.style.visibility === 'hidden')) {
-                            forceFixInputDisplay();
-                        }
-                    }, 3000);
+                    const input = document.getElementById('messageInput');
+                    input.disabled = false;
+                    input.readOnly = false;
+                    input.focus();
+                    fixInputBox();
                 }, 500);
                 
             } catch (error) {
@@ -729,7 +649,7 @@ function encodeIPForFirebase(ip) {
             loadUsers();
             
             // 切换论坛后修复输入框
-            setTimeout(forceFixInputDisplay, 200);
+            setTimeout(fixInputBox, 100);
         }
 
         // 加载消息
@@ -747,7 +667,6 @@ function encodeIPForFirebase(ip) {
             
             messagesRef.limitToLast(50).on('child_added', snapshot => {
                 const message = snapshot.val();
-                console.log('收到新消息:', message.text);
                 emptyEl.style.display = 'none';
                 addMessageToUI(message, snapshot.key);
             });
@@ -814,17 +733,15 @@ function encodeIPForFirebase(ip) {
             
             const input = document.getElementById('messageInput');
             
-            await new Promise(resolve => {
-                if (isComposing) {
-                    console.log('等待输入法完成...');
-                    setTimeout(resolve, 200);
-                } else {
-                    resolve();
-                }
-            });
+            // 等待输入法完成
+            if (isComposing) {
+                console.log('等待输入法完成...');
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
             
             let text = input.value.trim();
             
+            // 应用文本修正
             const fixedText = fixTextOrder(text);
             if (fixedText !== text) {
                 text = fixedText;
@@ -833,7 +750,7 @@ function encodeIPForFirebase(ip) {
             if (!text) {
                 alert('请输入消息内容');
                 input.focus();
-                forceFixInputDisplay();
+                fixInputBox();
                 return;
             }
             
@@ -858,16 +775,20 @@ function encodeIPForFirebase(ip) {
                 
                 console.log('消息发送成功');
                 
+                // 清空输入框
                 input.value = '';
                 lastInputText = '';
                 
+                // 隐藏输入提示
                 document.getElementById('typingIndicator').style.display = 'none';
                 
+                // 重新聚焦并修复输入框
                 setTimeout(() => {
                     input.focus();
-                    forceFixInputDisplay();
+                    fixInputBox();
                 }, 50);
                 
+                // 更新用户最后活动
                 await updateUserStatus(true);
                 
             } catch (error) {
@@ -932,7 +853,6 @@ function encodeIPForFirebase(ip) {
             
             // 输入法事件
             input.addEventListener('compositionstart', function() {
-                console.log('输入法开始');
                 isComposing = true;
             });
             
@@ -941,28 +861,20 @@ function encodeIPForFirebase(ip) {
             });
             
             input.addEventListener('compositionend', function(e) {
-                console.log('输入法结束');
                 isComposing = false;
-                
                 setTimeout(() => {
-                    const finalText = input.value;
-                    if (finalText !== lastInputText) {
-                        lastInputText = finalText;
-                    }
+                    lastInputText = input.value;
                 }, 100);
             });
             
-            // 输入事件 - 强制显示文本
+            // 输入事件
             input.addEventListener('input', function(e) {
                 const text = input.value;
                 if (!isComposing) {
                     lastInputText = text;
                 }
                 
-                // 强制显示输入的内容
-                input.style.color = '#333';
-                input.style.opacity = '1';
-                
+                // 显示输入提示
                 if (text.trim()) {
                     document.getElementById('typingIndicator').style.display = 'block';
                     if (typingTimeout) clearTimeout(typingTimeout);
@@ -972,13 +884,13 @@ function encodeIPForFirebase(ip) {
                 }
             });
             
-            // 点击输入框时强制修复
+            // 点击和聚焦时确保输入框可操作
             input.addEventListener('click', function() {
-                forceFixInputDisplay();
+                fixInputBox();
             });
             
             input.addEventListener('focus', function() {
-                forceFixInputDisplay();
+                fixInputBox();
             });
             
             // 回车发送
@@ -987,11 +899,7 @@ function encodeIPForFirebase(ip) {
                     e.preventDefault();
                     
                     if (isComposing) {
-                        console.log('回车时正在输入法输入，等待输入法结束');
-                        const event = new CompositionEvent('compositionend', {
-                            data: input.value
-                        });
-                        input.dispatchEvent(event);
+                        // 结束输入法状态
                         isComposing = false;
                     }
                     
@@ -1005,7 +913,6 @@ function encodeIPForFirebase(ip) {
             // 页面事件
             window.addEventListener('beforeunload', function() {
                 updateUserStatus(false);
-                if (inputFixInterval) clearInterval(inputFixInterval);
             });
             
             document.addEventListener('visibilitychange', function() {
@@ -1013,7 +920,7 @@ function encodeIPForFirebase(ip) {
                     updateUserStatus(false);
                 } else {
                     updateUserStatus(true);
-                    setTimeout(forceFixInputDisplay, 300);
+                    setTimeout(fixInputBox, 300);
                 }
             });
         }
@@ -1032,11 +939,6 @@ function encodeIPForFirebase(ip) {
                 });
             }
         }
-        
-        // 页面卸载前清理
-        window.addEventListener('unload', function() {
-            if (inputFixInterval) clearInterval(inputFixInterval);
-        });
     </script>
 </body>
-    </html>
+</html>
