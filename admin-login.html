@@ -92,6 +92,13 @@
     </div>
 
     <script>
+
+window.onerror = function(msg, url, line) {
+    alert("JS错误:\n" + msg + "\n行号: " + line);
+};
+
+        // ========== Firebase 配置 ==========
+
         // ========== Firebase 配置 ==========
         const firebaseConfig = {
             apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
