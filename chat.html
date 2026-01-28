@@ -8,7 +8,7 @@
     <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-database.js"></script>
     <style>
-        /* 聊天页面样式 - 原始样式保持 */
+        /* 聊天页面样式 */
         * {
             margin: 0;
             padding: 0;
@@ -18,8 +18,9 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #f5f7fa;
-            min-height: 100vh;
-            overflow-x: hidden;
+            min-height: 100vh; /* 关键修复：改为min-height */
+            overflow-x: hidden; /* 关键修复：只禁用横向滚动 */
+            /* 移除 overflow: hidden */
         }
         
         .chat-container {
@@ -100,6 +101,7 @@
             overflow-y: auto;
             padding: 20px;
             background: #f8f9fa;
+            -webkit-overflow-scrolling: touch; /* 添加iOS弹性滚动 */
         }
         
         .message-box {
@@ -140,6 +142,8 @@
             padding: 20px;
             border-top: 1px solid #e1e1e1;
             background: white;
+            position: relative;
+            z-index: 10; /* 确保输入区域在最上层 */
         }
         
         .input-row {
@@ -163,6 +167,14 @@
             border-color: #3498db;
         }
         
+        /* 添加移动端输入框优化 */
+        @media (max-width: 768px) {
+            #messageInput {
+                font-size: 16px;
+                min-height: 44px; /* 提高触摸区域 */
+            }
+        }
+        
         .send-button {
             padding: 12px 30px;
             background: #3498db;
@@ -173,6 +185,7 @@
             font-weight: 600;
             cursor: pointer;
             transition: background 0.3s;
+            -webkit-tap-highlight-color: transparent; /* 移除点击高亮 */
         }
         
         .send-button:hover {
@@ -387,7 +400,6 @@ function encodeIPForFirebase(ip) {
         let currentForum = 'general';
         let messagesRef = null;
         let statusRef = null;
-        // 移除 isComposing 和相关变量
         
         // 论坛映射
         const forumNames = {
@@ -636,7 +648,7 @@ function encodeIPForFirebase(ip) {
             }
         }
 
-        // 发送消息 - 简化版本
+        // 发送消息 - 简洁版本
         async function sendMessage() {
             const input = document.getElementById('messageInput');
             const text = input.value.trim();
@@ -727,7 +739,7 @@ function encodeIPForFirebase(ip) {
             });
         }
 
-        // 设置事件监听 - 修复版本
+        // 设置事件监听 - 简洁版本
         function setupEventListeners() {
             // 论坛切换
             document.querySelectorAll('.nav-item[data-forum]').forEach(item => {
@@ -737,10 +749,8 @@ function encodeIPForFirebase(ip) {
                 });
             });
             
-            // 获取输入框元素
+            // 输入框回车发送
             const input = document.getElementById('messageInput');
-            
-            // 输入框回车发送 - 使用 keydown 事件
             input.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -763,7 +773,7 @@ function encodeIPForFirebase(ip) {
             });
         }
 
-        // 打开设置（占位函数）
+        // 打开设置
         function openSettings() {
             alert('设置功能开发中...');
         }
