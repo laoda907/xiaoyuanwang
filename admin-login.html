@@ -23,47 +23,74 @@
             margin-bottom: 10px;
         }
         
-        .admin-login .subtitle {
+        .subtitle {
             color: #666;
-            margin-bottom: 30px;
             font-size: 14px;
+            margin-bottom: 30px;
         }
         
-        .admin-login input {
-            width: 100%;
-            padding: 15px;
-            margin: 10px 0;
-            border: 2px solid #e1e1e1;
-            border-radius: 10px;
+        .form-container {
+            text-align: left;
+        }
+        
+        .form-container h2 {
             font-size: 16px;
+            margin-bottom: 15px;
         }
         
-        .admin-login button {
+        .form-container input {
             width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
-            color: white;
+            padding: 10px;
+            margin-bottom: 12px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        .btn-login {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
             border: none;
-            border-radius: 10px;
-            font-size: 18px;
-            font-weight: 600;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 15px;
             cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .btn-login:hover {
+            opacity: 0.95;
+        }
+        
+        .tips {
             margin-top: 20px;
-        }
-        
-        .admin-login button:hover {
-            opacity: 0.9;
-        }
-        
-        .admin-hint {
-            color: #666;
             font-size: 12px;
-            margin-top: 20px;
-            text-align: center;
+            color: #666;
+            line-height: 1.6;
         }
         
-        .admin-hint code {
-            background: #f1f1f1;
+        .message {
+            margin-top: 15px;
+            font-size: 13px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            display: none;
+        }
+        
+        .message.error {
+            background: #ffe5e5;
+            color: #b91c1c;
+        }
+        
+        .message.success {
+            background: #e0f2fe;
+            color: #075985;
+        }
+        
+        code {
+            background: #f3f4f6;
             padding: 2px 6px;
             border-radius: 4px;
             font-family: monospace;
@@ -79,15 +106,15 @@
             <h2>管理员登录</h2>
             <input type="text" id="adminKey" placeholder="管理员密钥">
             <input type="password" id="adminPassword" placeholder="管理员密码">
-            <button onclick="adminLogin()">进入后台</button>
-            
-            <div class="admin-hint">
-                <p>默认密钥：<code>admin2024</code></p>
-                <p>默认密码：<code>xiaoyuan123</code></p>
-                <p>请在后台中修改默认密码</p>
-            </div>
+            <button class="btn-login" onclick="adminLogin()">登录后台</button>
             
             <div id="message" class="message"></div>
+            
+            <div class="tips">
+                <div>⚠️ 安全提示：</div>
+                <div>1. 管理员账号不再写死在前端代码中。</div>
+                <div>2. 请在 Firebase 控制台中创建 <code>admin/config</code> 节点来设置密钥和密码。</div>
+            </div>
         </div>
     </div>
 
@@ -96,8 +123,6 @@
 window.onerror = function(msg, url, line) {
     alert("JS错误:\n" + msg + "\n行号: " + line);
 };
-
-        // ========== Firebase 配置 ==========
 
         // ========== Firebase 配置 ==========
         const firebaseConfig = {
@@ -110,10 +135,12 @@ window.onerror = function(msg, url, line) {
             appId: "1:176173610464:web:3ff86202f9b05f24b36785"
         };
 
-        // 初始化 Firebase
-        let database;
+        let database = null;
+
         try {
-            firebase.initializeApp(firebaseConfig);
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
             database = firebase.database();
             console.log("✅ Firebase 初始化成功");
         } catch (error) {
@@ -125,9 +152,10 @@ window.onerror = function(msg, url, line) {
             const msgDiv = document.getElementById('message');
             msgDiv.textContent = text;
             msgDiv.className = 'message ' + type;
+            msgDiv.style.display = 'block';
         }
 
-        // 管理员登录
+        // 管理员登录（已去掉前端自动创建默认账号）
         async function adminLogin() {
             const adminKey = document.getElementById('adminKey').value.trim();
             const adminPassword = document.getElementById('adminPassword').value;
@@ -141,21 +169,18 @@ window.onerror = function(msg, url, line) {
                 // 检查管理员配置
                 const adminConfigRef = database.ref('admin/config');
                 const snapshot = await adminConfigRef.once('value');
-                let adminConfig = snapshot.val();
+                const adminConfig = snapshot.val();
                 
-                // 如果不存在，创建默认配置
+                // 如果不存在配置，不再在前端创建默认账号，避免密码暴露在代码里
                 if (!adminConfig) {
-                    adminConfig = {
-                        adminKey: 'admin2024',
-                        adminPassword: 'xiaoyuan123',
-                        lastModified: new Date().toISOString()
-                    };
-                    await adminConfigRef.set(adminConfig);
+                    showMessage('尚未配置管理员账号，请先在 Firebase 控制台中创建 admin/config 节点', 'error');
+                    console.warn('请在 Realtime Database 中手动创建 admin/config，例如：{ adminKey: "你的密钥", adminPassword: "你的密码" }');
+                    return;
                 }
                 
-                // 验证
+                // 验证账号和密码
                 if (adminKey === adminConfig.adminKey && adminPassword === adminConfig.adminPassword) {
-                    // 生成管理员会话
+                    // 生成管理员会话（只保存在本地浏览器）
                     const sessionToken = btoa('admin|' + Date.now() + '|' + Math.random().toString(36));
                     const sessionData = {
                         isAdmin: true,
@@ -164,12 +189,13 @@ window.onerror = function(msg, url, line) {
                         expiry: Date.now() + 2 * 60 * 60 * 1000 // 2小时有效期
                     };
                     
+                    // 本地保存加密会话
                     localStorage.setItem('admin_session', btoa(JSON.stringify(sessionData)));
                     
-                    showMessage('✅ 登录成功，跳转中...', 'success');
+                    showMessage('✅ 登录成功，正在进入后台...', 'success');
                     setTimeout(() => {
                         window.location.href = 'admin-panel.html';
-                    }, 1000);
+                    }, 800);
                 } else {
                     showMessage('❌ 密钥或密码错误', 'error');
                 }
