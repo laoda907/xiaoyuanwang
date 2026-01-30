@@ -303,6 +303,20 @@ function encodeIPForFirebase(ip) {
     return ip.replace(/\./g, "_");
 }
 
+// ========= UTF-8 安全的 Base64 解码（统一版本）=========
+function safeAtob(str) {
+    try {
+        return decodeURIComponent(
+            atob(str).split('').map(function (c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join('')
+        );
+    } catch (e) {
+        console.error('解码失败:', e);
+        return null;
+    }
+}
+
 // ========== Firebase 配置 ==========
 const firebaseConfig = {
     apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
@@ -328,16 +342,6 @@ const forumNames = {
 };
 
 // ========== 工具函数 ==========
-// 【修复2】修复中文顺序颠倒问题
-function safeAtob(str) {
-    try {
-        return atob(str);   // 不进行任何 split / decode / Unicode 处理
-    } catch (e) {
-        console.error('解码失败:', e);
-        return null;
-    }
-}
-
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
@@ -508,7 +512,7 @@ function loadMessages() {
     });
 }
 
-// 添加消息到UI - 【修复3】确保消息不被Base64处理
+// 添加消息到UI - 确保消息不被Base64处理
 function addMessageToUI(message, messageId) {
     const container = document.getElementById('messagesContainer');
     
@@ -523,7 +527,7 @@ function addMessageToUI(message, messageId) {
         minute: '2-digit' 
     }) : '刚刚';
     
-    // 【修复3】直接使用message.text，不做任何解码
+    // 直接使用message.text，不做任何解码
     const messageText = message.text || '';
     
     messageEl.innerHTML = `
@@ -546,7 +550,7 @@ function removeMessageFromUI(messageId) {
     }
 }
 
-// 发送消息 - 【修复3】确保消息不被Base64处理
+// 发送消息 - 确保消息不被Base64处理
 async function sendMessage() {
     console.log('sendMessage 被调用');
     
@@ -601,7 +605,7 @@ async function sendMessage() {
             database = firebase.database();
         }
         
-        // 【修复3】直接存储原始文本，不进行Base64编码
+        // 直接存储原始文本，不进行Base64编码
         const messageData = {
             userId: currentUser.userId,
             userName: currentUser.userName,
@@ -732,4 +736,4 @@ function logout() {
 }
     </script>
 </body>
-</html>
+    </html>
