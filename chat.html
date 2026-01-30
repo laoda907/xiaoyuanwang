@@ -15,120 +15,72 @@
             overflow-x: hidden;
             -webkit-text-size-adjust: 100%; /* 防止iOS字体缩放 */
         }
-
+        
         body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
             margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-            background: radial-gradient(circle at top, #2c3e50 0%, #000000 55%, #000000 100%);
-            color: #fff;
-            overflow-y: auto;
+            padding: 0;
+            /* 移除所有 height: 100vh */
         }
-
-        /* ========== 布局基础 ========== */
-        .chat-wrapper {
-            min-height: 100vh; /* 关键：整页高度 */
+        
+        .chat-container {
+            display: flex;
+            height: auto;
+            min-height: 100vh;
+            max-width: 1400px;
+            margin: 0 auto;
+            /* 关键：使用min-height而不是固定height */
+        }
+        
+        /* 左侧导航 */
+        .sidebar-left {
+            width: 80px;
+            background: #2c3e50;
+            color: white;
             display: flex;
             flex-direction: column;
-        }
-
-        .chat-layout {
-            flex: 1;
-            max-width: 1200px;
-            margin: 20px auto;
-            padding: 15px;
-            display: grid;
-            grid-template-columns: 260px minmax(0, 1.8fr) 260px;
-            gap: 15px;
-        }
-
-        /* ========== 卡片基础 ========== */
-        .chat-card {
-            background: rgba(15, 15, 20, 0.98);
-            border-radius: 18px;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.65);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .card-header {
-            padding: 14px 16px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-            display: flex;
             align-items: center;
-            gap: 8px;
+            padding: 20px 0;
+            flex-shrink: 0; /* 防止导航栏被压缩 */
         }
-
-        .card-title {
-            font-size: 16px;
-            font-weight: 600;
-        }
-
-        .card-subtitle {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.6);
-        }
-
-        /* ========== 左侧：论坛列表 ========== */
-        .forums-card {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .forums-list {
-            padding: 10px 12px 14px;
-        }
-
-        .forum-item {
-            padding: 10px 12px;
-            margin-bottom: 8px;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid transparent;
+        
+        .nav-item {
+            width: 100%;
+            text-align: center;
+            padding: 15px 0;
             cursor: pointer;
-            transition: all 0.15s ease;
+            transition: background 0.3s;
+            border-left: 4px solid transparent;
         }
-
-        .forum-item:hover {
-            background: rgba(255, 255, 255, 0.06);
-            transform: translateY(-1px);
+        
+        .nav-item:hover {
+            background: #34495e;
         }
-
-        .forum-item.active {
-            border-color: #4f8bff;
-            background: radial-gradient(circle at top left, rgba(79, 139, 255, 0.35), rgba(10, 10, 20, 0.95));
+        
+        .nav-item.active {
+            background: #34495e;
+            border-left-color: #3498db;
         }
-
-        .forum-name {
-            font-size: 14px;
-            font-weight: 600;
+        
+        .nav-icon {
+            font-size: 24px;
+            margin-bottom: 5px;
         }
-
-        .forum-desc {
+        
+        .nav-text {
             font-size: 12px;
-            color: rgba(255, 255, 255, 0.65);
-            margin-top: 2px;
         }
-
-        .forum-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 11px;
-            padding: 2px 7px;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.08);
-            color: rgba(255, 255, 255, 0.85);
-            margin-top: 6px;
-        }
-
-        /* ========== 中间：聊天区域 ========== */
-        .chat-card-main {
+        
+        /* 中间聊天区 - 关键修复flex结构 */
+        .chat-main {
+            flex: 1;
             display: flex;
             flex-direction: column;
-            min-height: 500px;
+            background: white;
+            min-height: 100vh; /* 确保有足够高度 */
         }
-
+        
         .chat-header {
             padding: 15px 25px;
             background: white;
@@ -138,448 +90,49 @@
             align-items: center;
             flex-shrink: 0; /* 防止头部被压缩 */
         }
-
+        
         .forum-title {
-            font-size: 18px;
-            color: #1f2933;
+            font-size: 20px;
             font-weight: 600;
-        }
-
-        .forum-subtitle {
-            font-size: 13px;
-            color: #6b7280;
-            margin-top: 1px;
-        }
-
-        .chat-header-right {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .online-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 999px;
-            background: #22c55e;
-            box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.25);
-        }
-
-        .online-text {
-            font-size: 12px;
-            color: #4b5563;
-        }
-
-        /* ========== 消息列表区域 ========== */
-        .messages-area {
-            flex: 1;
-            padding: 18px 18px 10px;
-            background: radial-gradient(circle at top left, #111827 0%, #020617 45%, #020617 100%);
-            overflow-y: auto;  /* 允许内容区滚动 */
-            position: relative;
-        }
-
-        .messages-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .message-group {
-            display: flex;
-            align-items: flex-start;
-            gap: 8px;
-        }
-
-        .message-avatar {
-            width: 28px;
-            height: 28px;
-            border-radius: 999px;
-            background: linear-gradient(135deg, #4f46e5, #8b5cf6);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 13px;
-            font-weight: 600;
-            color: #e5e7eb;
-            flex-shrink: 0;
-        }
-
-        .message-content {
-            max-width: 80%;
-        }
-
-        .message-header-row {
-            display: flex;
-            align-items: baseline;
-            gap: 8px;
-        }
-
-        .message-username {
-            font-size: 13px;
-            font-weight: 600;
-            color: #e5e7eb;
-        }
-
-        .message-meta {
-            font-size: 11px;
-            color: rgba(156, 163, 175, 0.9);
-        }
-
-        .message-bubble {
-            margin-top: 3px;
-            padding: 8px 11px;
-            border-radius: 12px;
-            background: rgba(17, 24, 39, 0.94);
-            color: #f9fafb;
-            font-size: 14px;
-            line-height: 1.5;
-            border: 1px solid rgba(55, 65, 81, 0.9);
-            word-break: break-word;
-        }
-
-        .message-bubble.me {
-            background: linear-gradient(135deg, #4f46e5, #7c3aed);
-            border-color: transparent;
-        }
-
-        .message-actions {
-            margin-top: 4px;
-            display: flex;
-            gap: 8px;
-            font-size: 11px;
-            color: rgba(148, 163, 184, 0.9);
-        }
-
-        .message-action-btn {
-            cursor: pointer;
-            opacity: 0.75;
-            transition: opacity 0.15s ease;
-        }
-
-        .message-action-btn:hover {
-            opacity: 1;
-            text-decoration: underline;
-        }
-
-        /* ========== 输入区域 ========== */
-        .chat-input-area {
-            padding: 10px 16px 12px;
-            background: rgba(15, 23, 42, 0.98);
-            border-top: 1px solid rgba(148, 163, 184, 0.25);
-        }
-
-        .chat-input-inner {
-            display: flex;
-            gap: 10px;
-            align-items: flex-end;
-        }
-
-        .chat-input {
-            flex: 1;
-            min-height: 38px;
-            max-height: 120px;
-            border-radius: 999px;
-            border: 1px solid rgba(148, 163, 184, 0.45);
-            padding: 8px 14px;
-            font-size: 14px;
-            resize: none;
-            outline: none;
-            background: rgba(15, 23, 42, 0.9);
-            color: #e5e7eb;
-            line-height: 1.5;
-        }
-
-        .chat-input::placeholder {
-            color: rgba(148, 163, 184, 0.8);
-        }
-
-        .chat-send-btn {
-            padding: 8px 16px;
-            border-radius: 999px;
-            border: none;
-            background: linear-gradient(135deg, #22c55e, #16a34a);
-            color: white;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            box-shadow: 0 8px 18px rgba(34, 197, 94, 0.45);
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-
-        .chat-send-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 10px 22px rgba(34, 197, 94, 0.55);
-        }
-
-        /* ========== 右侧：在线用户 / 活动 ========== */
-        .sidebar-card {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .users-list {
-            padding: 10px 12px;
-            max-height: 220px;
-            overflow-y: auto;
-        }
-
-        .user-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 7px 8px;
-            border-radius: 8px;
-            background: rgba(15, 23, 42, 0.85);
-            margin-bottom: 6px;
-        }
-
-        .user-main {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .user-avatar {
-            width: 24px;
-            height: 24px;
-            border-radius: 999px;
-            background: linear-gradient(135deg, #f97316, #ec4899);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            color: white;
-        }
-
-        .user-name {
-            font-size: 13px;
-        }
-
-        .user-tag {
-            font-size: 11px;
-            color: rgba(148, 163, 184, 0.95);
-        }
-
-        .user-status-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 999px;
-            background: #22c55e;
-            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.3);
-        }
-
-        .sidebar-footer {
-            margin-top: auto;
-            padding: 10px 12px 12px;
-            border-top: 1px solid rgba(148, 163, 184, 0.25);
-            font-size: 11px;
-            color: rgba(148, 163, 184, 0.95);
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .stat-line {
-            display: flex;
-            justify-content: space-between;
-        }
-
-        /* ========== 顶部条 ========== */
-        .top-bar {
-            max-width: 1200px;
-            margin: 10px auto 0;
-            padding: 0 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: rgba(209, 213, 219, 0.9);
-            font-size: 13px;
-        }
-
-        .top-left {
-            display: flex;
-            align-items: baseline;
-            gap: 6px;
-        }
-
-        .top-right {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 12px;
-        }
-
-        .back-link {
-            color: rgba(196, 181, 253, 0.95);
-            text-decoration: none;
-            font-size: 12px;
-        }
-
-        .back-link:hover {
-            text-decoration: underline;
-        }
-
-        /* ========== 响应式 ========== */
-        @media (max-width: 1024px) {
-            .chat-layout {
-                grid-template-columns: minmax(0, 1.8fr) 260px;
-                grid-template-rows: auto auto;
-            }
-
-            .forums-card {
-                grid-column: 1 / -1;
-                order: -1;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .chat-layout {
-                grid-template-columns: minmax(0, 1fr);
-            }
-
-            .sidebar-card {
-                display: none;
-            }
-
-            .forums-card {
-                order: -1;
-            }
-
-            .chat-card-main {
-                min-height: 420px;
-            }
-        }
-
-        /* 你的原有样式（消息列表、输入框等）我都尽量保持不变，这里就不全部展开了 */
-        .chat-container {
-            max-width: 1000px;
-            margin: 20px auto 30px;
-            padding: 20px;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-            display: flex;
+            color: #2c3e50;
         }
         
-        .sidebar {
-            width: 200px;
-            background: #2c3e50;
-            color: white;
-            border-radius: 15px;
-            margin-right: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px 0;
-            flex-shrink: 0;
-        }
-        
-        .avatar {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: #3498db;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 40px;
-            margin-bottom: 15px;
-        }
-        
-        .username {
-            font-size: 18px;
-            margin-bottom: 5px;
-        }
-        
-        .user-status {
-            font-size: 12px;
-            color: #bdc3c7;
-            margin-bottom: 20px;
-        }
-        
-        .menu {
-            width: 100%;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        
-        .menu-item {
-            padding: 12px 20px;
-            text-align: left;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        
-        .menu-item:hover {
-            background: rgba(255,255,255,0.1);
-        }
-        
-        .menu-item.active {
-            background: rgba(255,255,255,0.2);
-        }
-        
-        .chat-main {
-            flex: 1;
-            background: #f5f7fb;
-            border-radius: 15px;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        
-        .chat-header2 {
-            padding: 15px 20px;
-            border-bottom: 1px solid #e1e1e1;
-            background: white;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .forum-title2 {
-            font-size: 18px;
-            font-weight: bold;
-        }
-        
-        .forum-desc2 {
-            font-size: 13px;
+        .online-count {
             color: #7f8c8d;
+            font-size: 14px;
         }
         
-        .chat-content {
-            flex: 1;
-            padding: 20px;
+        .messages-container {
+            flex: 1 1 auto; /* 关键：允许增长和收缩 */
             overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+            -webkit-overflow-scrolling: touch;
         }
         
         .message-box {
             margin-bottom: 15px;
-            max-width: 80%;
-            padding: 10px 15px;
-            border-radius: 15px;
-            position: relative;
+            padding: 12px 15px;
             background: white;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            border-radius: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            max-width: 70%;
         }
         
         .message-box.own {
+            background: #e3f2fd;
             margin-left: auto;
-            background: #d1eaff;
         }
         
         .message-header {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
         }
         
         .message-user {
             font-weight: 600;
+            color: #2c3e50;
         }
         
         .message-time {
@@ -596,580 +149,735 @@
             padding: 20px;
             border-top: 1px solid #e1e1e1;
             background: white;
-            flex-shrink: 0; /* 防止输入区域被压缩 */
+            flex-shrink: 0; /* 关键：防止输入框区域被压缩 */
+            position: relative;
+            z-index: 100;
         }
         
-        .input-wrapper {
+        .input-row {
             display: flex;
             gap: 10px;
-            align-items: flex-end;
         }
         
+        /* ========== 输入框终极修复 ========== */
         #messageInput {
             flex: 1;
-            min-height: 40px;
-            max-height: 120px;
-            border-radius: 20px;
-            border: 1px solid #d1d5db;
-            padding: 10px 14px;
-            resize: none;
-            font-size: 14px;
-            outline: none;
-            line-height: 1.5;
+            padding: 12px 15px;
+            border: 2px solid #e1e1e1;
+            border-radius: 25px;
+            font-size: 16px;
+            font-family: inherit;
+            background: white;
+            color: #333;
+            
+            /* 关键：移动端输入法稳定技巧 */
+            transform: translateZ(0);
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            -webkit-transform: translateZ(0);
+            
+            /* 确保输入框在移动端表现正常 */
+            -webkit-appearance: none;
+            appearance: none;
+            -webkit-tap-highlight-color: transparent;
         }
         
         #messageInput:focus {
-            border-color: #6366f1;
-            box-shadow: 0 0 0 1px rgba(99,102,241,0.2);
+            outline: none;
+            border-color: #3498db;
         }
         
-        .send-btn {
-            background: linear-gradient(135deg, #4f46e5, #7c3aed);
-            border: none;
+        /* 移动端输入框优化 */
+        @media (max-width: 768px) {
+            #messageInput {
+                font-size: 16px;
+                padding: 14px 16px;
+                min-height: 44px;
+            }
+            
+            /* 防止移动端输入法引起的布局跳动 */
+            .input-area {
+                padding-bottom: env(safe-area-inset-bottom, 20px);
+            }
+        }
+        
+        .send-button {
+            padding: 12px 30px;
+            background: #3498db;
             color: white;
-            padding: 10px 20px;
-            border-radius: 20px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
-            white-space: nowrap;
+            transition: background 0.3s;
+            flex-shrink: 0; /* 防止按钮被压缩 */
+        }
+        
+        .send-button:hover {
+            background: #2980b9;
+        }
+        
+        /* 右侧用户列表 */
+        .sidebar-right {
+            width: 250px;
+            background: white;
+            border-left: 1px solid #e1e1e1;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0; /* 防止右侧栏被压缩 */
+        }
+        
+        .users-header {
+            padding: 20px;
+            border-bottom: 1px solid #e1e1e1;
+            font-weight: 600;
+            color: #2c3e50;
+            flex-shrink: 0;
+        }
+        
+        .users-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .user-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 5px;
+            transition: background 0.3s;
+        }
+        
+        .user-item:hover {
+            background: #f8f9fa;
+        }
+        
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            background: #3498db;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .user-info {
+            flex: 1;
+        }
+        
+        .user-name {
             font-weight: 500;
+            color: #2c3e50;
         }
         
-        .send-btn:hover {
-            opacity: 0.95;
-        }
-        
-        .online-users {
-            margin-top: 15px;
-            font-size: 13px;
+        .user-status {
+            font-size: 12px;
             color: #7f8c8d;
         }
-
+        
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #2ecc71;
+            margin-left: 10px;
+        }
+        
+        .status-indicator.offline {
+            background: #95a5a6;
+        }
+        
+        /* 底部信息栏 */
+        .user-info-bar {
+            padding: 15px 20px;
+            border-top: 1px solid #e1e1e1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        
+        .current-user {
+            display: flex;
+            align-items: center;
+        }
+        
+        .logout-button {
+            padding: 8px 15px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #7f8c8d;
+        }
+        
+        /* 响应式 */
         @media (max-width: 768px) {
-            .chat-container {
-                margin: 10px;
-                padding: 10px;
-                flex-direction: column;
-            }
-            
-            .sidebar {
-                width: 100%;
-                margin-right: 0;
-                margin-bottom: 10px;
-                flex-direction: row;
-                padding: 10px;
-            }
-            
-            .avatar {
-                width: 50px;
-                height: 50px;
-                font-size: 24px;
-                margin-bottom: 0;
-                margin-right: 10px;
-            }
-            
-            .menu {
+            .sidebar-right {
                 display: none;
             }
-            
-            .chat-main {
-                min-height: 400px;
+            .sidebar-left {
+                width: 60px;
+            }
+            .message-box {
+                max-width: 85%;
             }
             
-            .input-area {
-                padding: 10px;
+            /* 移动端安全区域支持 */
+            .chat-container {
+                padding-bottom: env(safe-area-inset-bottom, 0);
+            }
+        }
+        
+        /* 防止flex布局在输入法弹出时崩溃 */
+        @media (max-height: 500px) {
+            .chat-main {
+                min-height: auto;
+                max-height: 100vh;
             }
         }
     </style>
 </head>
 <body>
-    <div class="chat-wrapper">
-        <div class="top-bar">
-            <div class="top-left">
-                <span style="opacity: 0.85;">🌌 校园网 · 暗夜聊天室</span>
+    <div class="chat-container">
+        <!-- 左侧导航 -->
+        <div class="sidebar-left">
+            <div class="nav-item active" data-forum="general">
+                <div class="nav-icon">💬</div>
+                <div class="nav-text">综合</div>
             </div>
-            <div class="top-right">
-                <a href="main.html" class="back-link">← 返回主页</a>
-                <span id="currentUserNameTop"></span>
+            <div class="nav-item" data-forum="study">
+                <div class="nav-icon">📚</div>
+                <div class="nav-text">学习</div>
+            </div>
+            <div class="nav-item" data-forum="fun">
+                <div class="nav-icon">🎮</div>
+                <div class="nav-text">娱乐</div>
+            </div>
+            <div class="nav-item" onclick="openSettings()" style="margin-top: auto;">
+                <div class="nav-icon">⚙️</div>
+                <div class="nav-text">设置</div>
             </div>
         </div>
-
-        <div class="chat-layout">
-            <!-- 左侧：论坛列表 -->
-            <div class="chat-card forums-card">
-                <div class="card-header">
-                    <div>
-                        <div class="card-title">版块广场</div>
-                        <div class="card-subtitle">选择你想潜水的角落</div>
-                    </div>
-                </div>
-                <div class="forums-list" id="forumsList"></div>
+        
+        <!-- 中间聊天区 -->
+        <div class="chat-main">
+            <div class="chat-header">
+                <div class="forum-title" id="currentForum">综合讨论区</div>
+                <div class="online-count">在线：<span id="onlineCount">0</span>人</div>
             </div>
-
-            <!-- 中间：聊天 -->
-            <div class="chat-card chat-card-main">
-                <div class="chat-header">
-                    <div>
-                        <div class="forum-title" id="forumTitle">广场大厅</div>
-                        <div class="forum-subtitle" id="forumSubtitle">所有话题的交汇点</div>
-                    </div>
-                    <div class="chat-header-right">
-                        <div class="online-dot"></div>
-                        <div class="online-text">
-                            在线人数：<span id="onlineCountHeader">0</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="messages-area">
-                    <div class="messages-list" id="messagesContainer">
-                        <div id="emptyMessages" style="text-align:center;color:#9ca3af;margin-top:30px;">
-                            还没有人发言，来做第一个说话的人吧～
-                        </div>
-                    </div>
-                </div>
-
-                <div class="chat-input-area">
-                    <div class="chat-input-inner">
-                        <textarea id="messageInput" class="chat-input" placeholder="说点什么吧…… (按 Enter 发送, Shift + Enter 换行)" disabled></textarea>
-                        <button class="chat-send-btn" id="sendButton">
-                            <span>发送</span>
-                            <span style="font-size: 16px;">➤</span>
-                        </button>
-                    </div>
+            
+            <div class="messages-container" id="messagesContainer">
+                <div class="empty-state" id="emptyMessages">
+                    <div style="font-size: 48px; margin-bottom: 20px;">💬</div>
+                    <p>还没有消息，快来第一个发言吧！</p>
                 </div>
             </div>
-
-            <!-- 右侧：在线用户 -->
-            <div class="chat-card sidebar-card">
-                <div class="card-header">
+            
+            <div class="input-area">
+                <div class="input-row">
+                    <input type="text" id="messageInput" placeholder="输入消息..." maxlength="500">
+                    <button class="send-button" onclick="sendMessage()">发送</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 右侧用户列表 -->
+        <div class="sidebar-right">
+            <div class="users-header">
+                👥 在线用户 (<span id="userCount">0</span>)
+            </div>
+            <div class="users-list" id="usersList">
+                <div class="empty-state">
+                    <p>加载用户中...</p>
+                </div>
+            </div>
+            <div class="user-info-bar">
+                <div class="current-user">
+                    <div class="user-avatar" id="userAvatar">U</div>
                     <div>
-                        <div class="card-title">在线用户</div>
-                        <div class="card-subtitle">当前活跃 · <span id="userCount">0</span> 人</div>
+                        <div class="user-name" id="currentUserName">用户</div>
+                        <div class="user-status" id="userStatus">在线</div>
                     </div>
                 </div>
-                <div class="users-list" id="usersList"></div>
-                <div class="sidebar-footer">
-                    <div class="stat-line">
-                        <span>当前论坛</span>
-                        <span id="forumNameStat">广场大厅</span>
-                    </div>
-                    <div class="stat-line">
-                        <span>你的昵称</span>
-                        <span id="currentUserNameSide">-</span>
-                    </div>
-                    <div class="stat-line">
-                        <span>状态</span>
-                        <span id="statusText">连接中...</span>
-                    </div>
-                </div>
+                <button class="logout-button" onclick="logout()">退出</button>
             </div>
         </div>
     </div>
 
     <script>
-        // ========= 安全IP编码 =========
-        function encodeIPForFirebase(ip) {
-            return ip.replace(/\./g, "_");
+// ========= 安全IP编码 =========
+function encodeIPForFirebase(ip) {
+    return ip.replace(/\./g, "_");
+}
+
+// ========== Firebase 配置 ==========
+const firebaseConfig = {
+    apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
+    authDomain: "laoda907-22511.firebasestorage.app",
+    databaseURL: "https://laoda907-22511-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "laoda907-22511",
+    storageBucket: "laoda907-22511.firebasestorage.app",
+    messagingSenderId: "176173610464",
+    appId: "1:176173610464:web:3ff86202f9b05f24b36785"
+};
+
+// 全局变量
+let database;
+let currentUser = null;
+let currentForum = 'general';
+let messagesRef = null;
+
+// 论坛映射
+const forumNames = {
+    'general': '综合讨论区',
+    'study': '学习交流',
+    'fun': '休闲娱乐'
+};
+
+// ========== 工具函数 ==========
+function safeAtob(str) {
+    try {
+        return decodeURIComponent(
+            atob(str).split('').map(function (c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join('')
+        );
+    } catch (e) {
+        console.error('解码失败:', e);
+        return null;
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// 页面加载
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('聊天页面加载');
+    checkLogin();
+});
+
+// 检查登录状态
+function checkLogin() {
+    const sessionStr = localStorage.getItem('xiaoyuan_session');
+    if (!sessionStr) {
+        window.location.href = 'index.html';
+        return;
+    }
+    
+    try {
+        const decodedStr = safeAtob(sessionStr);
+        if (!decodedStr) {
+            throw new Error('解码失败');
         }
-
-        // ========== Firebase 配置 ==========
-        const firebaseConfig = {
-            apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
-            authDomain: "laoda907-22511.firebaseapp.com",   // ✅ 修正为 firebaseapp.com
-            databaseURL: "https://laoda907-22511-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "laoda907-22511",
-            storageBucket: "laoda907-22511.firebasestorage.app",
-            messagingSenderId: "176173610464",
-            appId: "1:176173610464:web:3ff86202f9b05f24b36785"
-        };
-
-        // 全局变量
-        let database;
-        let currentUser = null;
-        let currentForum = 'general';
-        let messagesRef = null;
-        let statusRef = null;
         
-        // 论坛映射
-        const forumNames = {
-            'general': '综合讨论区',
-            'study': '学习交流',
-            'fun': '休闲娱乐'
-        };
+        const sessionData = JSON.parse(decodedStr);
+        if (Date.now() > sessionData.expiry) {
+            localStorage.removeItem('xiaoyuan_session');
+            window.location.href = 'index.html';
+            return;
+        }
+        
+        currentUser = sessionData;
+        console.log('用户已登录:', currentUser.userName);
+        initChat();
+        
+    } catch (error) {
+        console.error('会话验证失败:', error);
+        localStorage.removeItem('xiaoyuan_session');
+        window.location.href = 'index.html';
+    }
+}
 
-        // ========== 工具函数 ==========
-        function safeAtob(str) {
+// 初始化聊天
+async function initChat() {
+    try {
+        // 初始化Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        database = firebase.database();
+        console.log('Firebase 初始化成功');
+        
+        // 显示用户信息
+        document.getElementById('currentUserName').textContent = currentUser.userName;
+        document.getElementById('userAvatar').textContent = currentUser.userName.charAt(0).toUpperCase();
+        
+        // 设置用户状态为在线
+        await updateUserStatus(true);
+        
+        // 加载之前选择的论坛
+        const savedForum = sessionStorage.getItem('selectedForum');
+        if (savedForum && ['general', 'study', 'fun'].includes(savedForum)) {
+            switchForum(savedForum);
+        } else {
+            switchForum('general');
+        }
+        
+        // 加载在线用户
+        loadUsers();
+        
+        // 设置事件监听
+        setupEventListeners();
+        
+        // 确保输入框可以输入
+        const input = document.getElementById('messageInput');
+        input.disabled = false;
+        input.placeholder = "输入消息...";
+        
+        // 延迟聚焦，确保布局稳定
+        setTimeout(() => {
+            input.focus();
+        }, 300);
+        
+    } catch (error) {
+        console.error('初始化失败:', error);
+        alert('系统初始化失败，请刷新页面: ' + error.message);
+    }
+}
+
+// 更新用户状态
+async function updateUserStatus(online) {
+    try {
+        if (!currentUser) return;
+        
+        const statusRef = database.ref('status/' + currentUser.userId);
+        const userData = {
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            online: online,
+            forum: currentForum,
+            lastSeen: new Date().toISOString()
+        };
+        
+        if (online) {
+            await statusRef.set(userData);
+        } else {
+            await statusRef.update({ 
+                online: false,
+                lastSeen: new Date().toISOString() 
+            });
+        }
+        
+        console.log('更新用户状态:', online ? '在线' : '离线');
+    } catch (error) {
+        console.error('更新状态失败:', error);
+    }
+}
+
+// 切换论坛
+function switchForum(forumId) {
+    console.log('切换论坛到:', forumId);
+    
+    currentForum = forumId;
+    
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    document.querySelector(`.nav-item[data-forum="${forumId}"]`).classList.add('active');
+    document.getElementById('currentForum').textContent = forumNames[forumId];
+    
+    if (messagesRef) {
+        messagesRef.off();
+    }
+    
+    loadMessages();
+    
+    if (currentUser) {
+        updateUserStatus(true);
+    }
+    
+    loadUsers();
+}
+
+// 加载消息
+function loadMessages() {
+    const container = document.getElementById('messagesContainer');
+    const emptyEl = document.getElementById('emptyMessages');
+    
+    Array.from(container.children).forEach(child => {
+        if (child.id !== 'emptyMessages') {
+            child.remove();
+        }
+    });
+    
+    messagesRef = database.ref('forums/' + currentForum + '/messages');
+    
+    messagesRef.limitToLast(50).on('child_added', snapshot => {
+        const message = snapshot.val();
+        emptyEl.style.display = 'none';
+        addMessageToUI(message, snapshot.key);
+    });
+    
+    messagesRef.on('child_removed', snapshot => {
+        removeMessageFromUI(snapshot.key);
+    });
+    
+    messagesRef.limitToLast(50).once('value', snapshot => {
+        if (snapshot.exists()) {
+            emptyEl.style.display = 'none';
+            snapshot.forEach(childSnapshot => {
+                const message = childSnapshot.val();
+                addMessageToUI(message, childSnapshot.key);
+            });
+        }
+    });
+}
+
+// 添加消息到UI
+function addMessageToUI(message, messageId) {
+    const container = document.getElementById('messagesContainer');
+    const emptyEl = document.getElementById('emptyMessages');
+    
+    emptyEl.style.display = 'none';
+    
+    const isOwn = message.userId === currentUser.userId;
+    
+    const messageEl = document.createElement('div');
+    messageEl.className = `message-box ${isOwn ? 'own' : ''}`;
+    messageEl.id = `msg_${messageId}`;
+    messageEl.dataset.messageId = messageId;
+    
+    const time = message.timestamp ? new Date(message.timestamp).toLocaleTimeString('zh-CN', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+    }) : '刚刚';
+    
+    messageEl.innerHTML = `
+        <div class="message-header">
+            <span class="message-user">${escapeHtml(message.userName)}</span>
+            <span class="message-time">${time}</span>
+        </div>
+        <div class="message-content">${escapeHtml(message.text)}</div>
+    `;
+    
+    container.appendChild(messageEl);
+    container.scrollTop = container.scrollHeight;
+}
+
+// 删除消息从UI
+function removeMessageFromUI(messageId) {
+    const messageEl = document.getElementById(`msg_${messageId}`);
+    if (messageEl) {
+        messageEl.remove();
+    }
+}
+
+// 发送消息 - 修复版
+async function sendMessage() {
+    console.log('sendMessage 被调用');
+    
+    const input = document.getElementById('messageInput');
+    const text = input.value.trim();
+    
+    if (!text) {
+        alert('请输入消息内容');
+        input.focus();
+        return;
+    }
+    
+    // 确保当前用户存在
+    if (!currentUser || !currentUser.userId) {
+        console.log('currentUser 不存在，尝试从本地存储恢复');
+        const sessionStr = localStorage.getItem('xiaoyuan_session');
+        if (sessionStr) {
             try {
-                return decodeURIComponent(
-                    atob(str).split('').map(function (c) {
-                        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                    }).join('')
-                );
-            } catch (e) {
-                console.error('解码失败:', e);
-                return null;
+                const decodedStr = safeAtob(sessionStr);
+                if (decodedStr) {
+                    currentUser = JSON.parse(decodedStr);
+                    console.log('从存储恢复用户:', currentUser.userName);
+                }
+            } catch (error) {
+                console.error('恢复用户失败:', error);
             }
         }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+        
+        if (!currentUser) {
+            alert('会话已过期，请重新登录');
+            window.location.href = 'index.html';
+            return;
         }
+    }
+    
+    console.log('准备发送消息:', {
+        用户: currentUser.userName,
+        论坛: currentForum,
+        内容: text
+    });
+    
+    try {
+        // 确保数据库已初始化
+        if (!database) {
+            console.log('数据库未初始化，重新初始化...');
+            firebase.initializeApp(firebaseConfig);
+            database = firebase.database();
+        }
+        
+        // 创建消息数据
+        const messageData = {
+            userId: currentUser.userId,
+            userName: currentUser.userName,
+            text: text,
+            timestamp: new Date().toISOString(),
+            forum: currentForum
+        };
+        
+        console.log('消息数据:', messageData);
+        
+        // 发送到Firebase
+        const messageRef = database.ref(`forums/${currentForum}/messages`).push();
+        await messageRef.set(messageData);
+        
+        console.log('✅ 消息发送成功，ID:', messageRef.key);
+        
+        // 清空输入框并重新聚焦
+        input.value = '';
+        setTimeout(() => {
+            input.focus();
+        }, 50);
+        
+        // 更新用户状态
+        await updateUserStatus(true);
+        
+    } catch (error) {
+        console.error('❌ 发送消息失败:', error);
+        alert('发送失败: ' + error.message);
+    }
+}
 
-        // 页面加载
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('聊天页面加载');
-            checkLogin();
+// 加载在线用户
+function loadUsers() {
+    const usersList = document.getElementById('usersList');
+    const userCountEl = document.getElementById('userCount');
+    const onlineCountEl = document.getElementById('onlineCount');
+    
+    usersList.innerHTML = '';
+    
+    const usersRef = database.ref('status');
+    
+    usersRef.on('value', snapshot => {
+        const users = [];
+        snapshot.forEach(childSnapshot => {
+            const user = childSnapshot.val();
+            if (user.online && user.forum === currentForum) {
+                users.push(user);
+            }
         });
         
-        // 检查登录状态（进入页面时调用）
-        function checkLogin() {
-            const sessionStr = localStorage.getItem('xiaoyuan_session');
-            if (!sessionStr) {
-                alert('请先登录');
-                window.location.href = 'index.html';
-                return;
-            }
-            
-            try {
-                const decodedStr = safeAtob(sessionStr);
-                if (!decodedStr) {
-                    throw new Error('解码失败');
-                }
-                
-                const sessionData = JSON.parse(decodedStr);
-                if (Date.now() > sessionData.expiry) {
-                    alert('登录已过期，请重新登录');
-                    localStorage.removeItem('xiaoyuan_session');
-                    window.location.href = 'index.html';
-                    return;
-                }
-                
-                currentUser = sessionData;
-                console.log('用户已登录:', currentUser.userName);
-                initChat();
-                
-            } catch (error) {
-                console.error('会话验证失败:', error);
-                localStorage.removeItem('xiaoyuan_session');
-                alert('登录状态异常，请重新登录');
-                window.location.href = 'index.html';
-            }
-        }
-
-        // 再次校验当前用户（发送消息前调用，防止 currentUser 丢失）
-        function ensureCurrentUser() {
-            if (currentUser && currentUser.userId && currentUser.userName) {
-                return true;
-            }
-            const sessionStr = localStorage.getItem('xiaoyuan_session');
-            if (!sessionStr) {
-                alert('请先登录');
-                window.location.href = 'index.html';
-                return false;
-            }
-            try {
-                const decodedStr = safeAtob(sessionStr);
-                if (!decodedStr) {
-                    throw new Error('解码失败');
-                }
-                const sessionData = JSON.parse(decodedStr);
-                if (Date.now() > sessionData.expiry) {
-                    alert('登录已过期，请重新登录');
-                    localStorage.removeItem('xiaoyuan_session');
-                    window.location.href = 'index.html';
-                    return false;
-                }
-                currentUser = sessionData;
-                return true;
-            } catch (e) {
-                console.error('会话解析失败:', e);
-                alert('登录状态异常，请重新登录');
-                localStorage.removeItem('xiaoyuan_session');
-                window.location.href = 'index.html';
-                return false;
-            }
-        }
+        userCountEl.textContent = users.length;
+        onlineCountEl.textContent = users.length;
         
-        // 初始化聊天
-        async function initChat() {
-            try {
-                // 初始化Firebase
-                if (!firebase.apps.length) {
-                    firebase.initializeApp(firebaseConfig);
-                }
-                database = firebase.database();
-                console.log('Firebase 初始化成功');
-                
-                // 显示用户信息
-                document.getElementById('currentUserNameTop').textContent = '👤 ' + currentUser.userName;
-                document.getElementById('currentUserNameSide').textContent = currentUser.userName;
-                
-                // 初始化论坛列表
-                initForums();
-                
-                // 加载默认板块
-                const savedForum = sessionStorage.getItem('selectedForum');
-                if (savedForum && ['general', 'study', 'fun'].includes(savedForum)) {
-                    switchForum(savedForum);
-                } else {
-                    switchForum('general');
-                }
-                
-                // 加载在线用户
-                loadUsers();
-                
-                // 设置事件监听
-                setupEventListeners();
-                
-                // 确保输入框可用
-                const input = document.getElementById('messageInput');
-                input.disabled = false;
-                setTimeout(() => input.focus(), 300);
-                
-            } catch (error) {
-                console.error('初始化失败:', error);
-                alert('系统初始化失败，请刷新页面: ' + error.message);
-            }
-        }
-
-        // 初始化论坛列表
-        function initForums() {
-            const forumsList = document.getElementById('forumsList');
-            forumsList.innerHTML = '';
-            
-            Object.keys(forumNames).forEach(key => {
-                const item = document.createElement('div');
-                item.className = 'forum-item' + (key === currentForum ? ' active' : '');
-                item.dataset.forum = key;
-                item.innerHTML = `
-                    <div class="forum-name">${forumNames[key]}</div>
-                    <div class="forum-desc">${key === 'general' ? '随便聊聊 · 吐槽日常 · 发发疯' : key === 'study' ? '学习问题互帮互助' : '娱乐、游戏、音乐、电影'} </div>
-                    <div class="forum-badge">
-                        <span>●</span>
-                        <span>${key === 'general' ? '广场大厅' : key === 'study' ? '学习角' : '放松一下'}</span>
+        if (users.length === 0) {
+            usersList.innerHTML = '<div class="empty-state"><p>暂无在线用户</p></div>';
+        } else {
+            users.forEach(user => {
+                const userItem = document.createElement('div');
+                userItem.className = 'user-item';
+                userItem.innerHTML = `
+                    <div class="user-avatar">${user.userName.charAt(0).toUpperCase()}</div>
+                    <div class="user-info">
+                        <div class="user-name">${escapeHtml(user.userName)}</div>
+                        <div class="user-status">在线</div>
                     </div>
+                    <div class="status-indicator"></div>
                 `;
-                
-                item.addEventListener('click', () => {
-                    switchForum(key);
-                });
-                
-                forumsList.appendChild(item);
+                usersList.appendChild(userItem);
             });
         }
+    });
+}
 
-        // 切换论坛
-        function switchForum(forumId) {
-            if (currentForum === forumId) return;
-            
-            currentForum = forumId;
-            sessionStorage.setItem('selectedForum', forumId);
-            
-            // 更新UI
-            document.getElementById('forumTitle').textContent = forumNames[forumId] || '未知板块';
-            document.getElementById('forumSubtitle').textContent = forumId === 'general' ? '所有话题的交汇点' : (forumId === 'study' ? '考试、作业、保研、出国' : '聊点轻松的');
-            document.getElementById('forumNameStat').textContent = forumNames[forumId] || '未知板块';
-            
-            // 更新左侧选中状态
-            document.querySelectorAll('.forum-item').forEach(item => {
-                item.classList.toggle('active', item.dataset.forum === forumId);
-            });
-            
-            // 重新加载该板块的消息
-            loadMessages();
-            
-            // 更新在线状态
-            updateUserStatus(true);
+// 设置事件监听 - 修复版
+function setupEventListeners() {
+    console.log('设置事件监听器...');
+    
+    // 论坛切换
+    document.querySelectorAll('.nav-item[data-forum]').forEach(item => {
+        item.addEventListener('click', function() {
+            const forumId = this.getAttribute('data-forum');
+            console.log('切换论坛到:', forumId);
+            switchForum(forumId);
+        });
+    });
+    
+    const input = document.getElementById('messageInput');
+    const sendButton = document.querySelector('.send-button');
+    
+    if (!input) {
+        console.error('❌ 输入框元素未找到！');
+        return;
+    }
+    
+    if (!sendButton) {
+        console.error('❌ 发送按钮未找到！');
+        return;
+    }
+    
+    console.log('输入框和发送按钮已找到');
+    
+    // 确保输入框启用
+    input.disabled = false;
+    input.placeholder = "输入消息...";
+    
+    // 发送按钮点击事件 - 防止onclick失效的备用方案
+    sendButton.addEventListener('click', function() {
+        console.log('发送按钮被点击');
+        sendMessage();
+    });
+    
+    // 输入框回车发送（Shift+Enter换行）
+    input.addEventListener('keydown', function(e) {
+        console.log('按键:', e.key, 'Shift:', e.shiftKey);
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
         }
+    });
+    
+    // 页面关闭时更新状态
+    window.addEventListener('beforeunload', function() {
+        updateUserStatus(false);
+    });
+    
+    // 页面可见性变化
+    document.addEventListener('visibilitychange', function() {
+        updateUserStatus(!document.hidden);
+    });
+}
 
-        // 加载消息
-        function loadMessages() {
-            const container = document.getElementById('messagesContainer');
-            const emptyEl = document.getElementById('emptyMessages');
-            container.innerHTML = '';
-            emptyEl.style.display = 'block';
-            
-            if (messagesRef) {
-                messagesRef.off();
-            }
-            
-            messagesRef = database.ref('forums/' + currentForum + '/messages');
-            messagesRef.limitToLast(100).on('value', snapshot => {
-                container.innerHTML = '';
-                if (!snapshot.exists()) {
-                    emptyEl.style.display = 'block';
-                    return;
-                }
-                
-                snapshot.forEach(child => {
-                    const message = child.val();
-                    addMessageToUI(message, child.key);
-                });
-                
-                emptyEl.style.display = 'none';
-                const messagesArea = document.querySelector('.messages-area');
-                messagesArea.scrollTop = messagesArea.scrollHeight;
-            });
-        }
+// 打开设置
+function openSettings() {
+    alert('设置功能开发中...');
+}
 
-        // 添加消息到UI
-        function addMessageToUI(message, messageId) {
-            const container = document.getElementById('messagesContainer');
-            const emptyEl = document.getElementById('emptyMessages');
-            
-            emptyEl.style.display = 'none';
-            
-            const isOwn = currentUser && message.userId === currentUser.userId;
-            
-            const messageEl = document.createElement('div');
-            messageEl.className = `message-box ${isOwn ? 'own' : ''}`;
-            messageEl.id = `msg_${messageId}`;
-            messageEl.dataset.messageId = messageId;
-            
-            const time = message.timestamp ? new Date(message.timestamp).toLocaleTimeString('zh-CN', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-            }) : '刚刚';
-            
-            messageEl.innerHTML = `
-                <div class="message-header">
-                    <span class="message-user">${escapeHtml(message.userName)}</span>
-                    <span class="message-time">${time}</span>
-                </div>
-                <div class="message-content">${escapeHtml(message.text)}</div>
-            `;
-            
-            container.appendChild(messageEl);
-            
-            // 滚动到最新
-            const messagesArea = document.querySelector('.messages-area');
-            messagesArea.scrollTop = messagesArea.scrollHeight;
-        }
-
-        // 发送消息
-        async function sendMessage() {
-            const input = document.getElementById('messageInput');
-            const text = input.value.trim();
-            
-            if (!text) {
-                alert('请输入消息内容');
-                input.focus();
-                return;
-            }
-            
-            // 这里改成调用 ensureCurrentUser，更稳，不会莫名其妙说“请先登录”
-            if (!ensureCurrentUser()) {
-                return;
-            }
-            
-            console.log('发送消息:', text);
-            
-            try {
-                const messageRef = database.ref('forums/' + currentForum + '/messages').push();
-                
-                await messageRef.set({
-                    userId: currentUser.userId,
-                    userName: currentUser.userName,
-                    text: text,
-                    timestamp: new Date().toISOString()
-                });
-                
-                input.value = '';
-                input.focus();
-                
-                // 更新用户活动状态
-                await updateUserStatus(true);
-                
-            } catch (error) {
-                console.error('发送消息失败:', error);
-                alert('发送失败，请重试: ' + error.message);
-            }
-        }
-
-        // 更新用户在线状态
-        async function updateUserStatus(isOnline) {
-            if (!currentUser) return;
-            
-            try {
-                const statusRef = database.ref('status/' + currentUser.userId);
-                await statusRef.set({
-                    userName: currentUser.userName,
-                    isOnline: isOnline,
-                    lastActive: new Date().toISOString(),
-                    forum: currentForum
-                });
-                
-                document.getElementById('statusText').textContent = isOnline ? '在线' : '已离线';
-            } catch (error) {
-                console.error('更新在线状态失败:', error);
-            }
-        }
-
-        // 加载在线用户列表
-        function loadUsers() {
-            const usersList = document.getElementById('usersList');
-            const userCountEl = document.getElementById('userCount');
-            const onlineCountEl = document.getElementById('onlineCountHeader');
-            
-            usersList.innerHTML = '';
-            
-            const statusRef = database.ref('status');
-            statusRef.on('value', snapshot => {
-                usersList.innerHTML = '';
-                let total = 0;
-                let online = 0;
-                
-                if (snapshot.exists()) {
-                    snapshot.forEach(child => {
-                        const user = child.val();
-                        total++;
-                        if (user.isOnline) online++;
-                        
-                        const userItem = document.createElement('div');
-                        userItem.className = 'user-item';
-                        userItem.innerHTML = `
-                            <div class="user-main">
-                                <div class="user-avatar">${user.userName ? user.userName.charAt(0).toUpperCase() : '?'}</div>
-                                <div>
-                                    <div class="user-name">${escapeHtml(user.userName || '匿名')}</div>
-                                    <div class="user-tag">${forumNames[user.forum] || '未知板块'}</div>
-                                </div>
-                            </div>
-                            <div class="user-status-dot" style="opacity:${user.isOnline ? 1 : 0.35};box-shadow:${user.isOnline ? '' : 'none'}"></div>
-                        `;
-                        usersList.appendChild(userItem);
-                    });
-                }
-                
-                userCountEl.textContent = total;
-                onlineCountEl.textContent = online;
-                
-                if (total === 0) {
-                    usersList.innerHTML = '<div class="empty-state"><p>暂无在线用户</p></div>';
-                }
-            });
-        }
-
-        // 事件绑定
-        function setupEventListeners() {
-            const input = document.getElementById('messageInput');
-            const sendButton = document.getElementById('sendButton');
-            
-            sendButton.addEventListener('click', sendMessage);
-            
-            input.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                }
-            });
-            
-            window.addEventListener('beforeunload', function() {
-                updateUserStatus(false);
-            });
-        }
+// 退出登录
+function logout() {
+    if (confirm('确定要退出登录吗？')) {
+        updateUserStatus(false).then(() => {
+            localStorage.removeItem('xiaoyuan_session');
+            window.location.href = 'index.html';
+        });
+    }
+}
     </script>
 </body>
-</html>
+    </html>
