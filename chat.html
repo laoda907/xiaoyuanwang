@@ -328,13 +328,10 @@ const forumNames = {
 };
 
 // ========== 工具函数 ==========
+// 【修复2】修复中文顺序颠倒问题
 function safeAtob(str) {
     try {
-        return decodeURIComponent(
-            atob(str).split('').map(function (c) {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join('')
-        );
+        return atob(str);   // 不进行任何 split / decode / Unicode 处理
     } catch (e) {
         console.error('解码失败:', e);
         return null;
@@ -492,36 +489,28 @@ function loadMessages() {
     
     messagesRef = database.ref('forums/' + currentForum + '/messages');
     
+    // 【修复1】删除会导致重复显示的 once('value') 代码块
+    // 只保留 on('child_added') 监听
     messagesRef.limitToLast(50).on('child_added', snapshot => {
         const message = snapshot.val();
+        
+        // 移除空状态提示
+        const emptyState = container.querySelector('div[style*="text-align: center"]');
+        if (emptyState) {
+            emptyState.remove();
+        }
+        
         addMessageToUI(message, snapshot.key);
     });
     
     messagesRef.on('child_removed', snapshot => {
         removeMessageFromUI(snapshot.key);
     });
-    
-    messagesRef.limitToLast(50).once('value', snapshot => {
-        if (snapshot.exists() && snapshot.numChildren() > 0) {
-            container.innerHTML = '';
-            snapshot.forEach(childSnapshot => {
-                const message = childSnapshot.val();
-                addMessageToUI(message, childSnapshot.key);
-            });
-        } else {
-            container.innerHTML = '<div style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);"><p>💬 还没有消息，快来第一个发言吧！</p></div>';
-        }
-    });
 }
 
-// 添加消息到UI - 修复2：确保消息不被Base64处理
+// 添加消息到UI - 【修复3】确保消息不被Base64处理
 function addMessageToUI(message, messageId) {
     const container = document.getElementById('messagesContainer');
-    
-    // 移除空状态
-    if (container.children.length === 1 && container.children[0].innerHTML.includes('还没有消息')) {
-        container.innerHTML = '';
-    }
     
     const isOwn = message.userId === currentUser.userId;
     
@@ -534,7 +523,7 @@ function addMessageToUI(message, messageId) {
         minute: '2-digit' 
     }) : '刚刚';
     
-    // 修复2：直接使用message.text，不做任何Base64解码
+    // 【修复3】直接使用message.text，不做任何解码
     const messageText = message.text || '';
     
     messageEl.innerHTML = `
@@ -557,7 +546,7 @@ function removeMessageFromUI(messageId) {
     }
 }
 
-// 发送消息 - 修复：确保消息不被Base64处理
+// 发送消息 - 【修复3】确保消息不被Base64处理
 async function sendMessage() {
     console.log('sendMessage 被调用');
     
@@ -612,7 +601,7 @@ async function sendMessage() {
             database = firebase.database();
         }
         
-        // 修复：直接存储原始文本，不进行Base64编码
+        // 【修复3】直接存储原始文本，不进行Base64编码
         const messageData = {
             userId: currentUser.userId,
             userName: currentUser.userName,
@@ -706,7 +695,6 @@ function setupEventListeners() {
     
     console.log('找到输入框和发送按钮');
     
-    // 修复1：只在这里绑定事件，删除HTML中的onclick
     // 发送按钮点击事件
     sendButton.addEventListener('click', function(e) {
         console.log('发送按钮被点击');
