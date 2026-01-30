@@ -34,7 +34,7 @@
 </div>
 
 <script>
-/* ========= 安全Base64函数（修复中文）========= */
+/* ========= UTF-8 安全的 Base64 编码/解码（统一版本）========= */
 function safeBtoa(str) {
     return btoa(
         encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function (_, p1) {
