@@ -278,7 +278,8 @@
             <div class="chat-input-area">
                 <div class="input-row">
                     <input type="text" id="messageInput" class="chat-input" placeholder="输入消息..." maxlength="500">
-                    <button id="sendButton" class="chat-send-btn" onclick="sendMessage()">发送</button>
+                    <!-- 修复1：删除onclick属性，防止重复发送 -->
+                    <button id="sendButton" class="chat-send-btn">发送</button>
                 </div>
             </div>
         </div>
@@ -513,7 +514,7 @@ function loadMessages() {
     });
 }
 
-// 添加消息到UI
+// 添加消息到UI - 修复2：确保消息不被Base64处理
 function addMessageToUI(message, messageId) {
     const container = document.getElementById('messagesContainer');
     
@@ -533,12 +534,15 @@ function addMessageToUI(message, messageId) {
         minute: '2-digit' 
     }) : '刚刚';
     
+    // 修复2：直接使用message.text，不做任何Base64解码
+    const messageText = message.text || '';
+    
     messageEl.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-            <div class="message-user">${escapeHtml(message.userName)}</div>
+            <div class="message-user">${escapeHtml(message.userName || '匿名用户')}</div>
             <div class="message-time">${time}</div>
         </div>
-        <div>${escapeHtml(message.text)}</div>
+        <div>${escapeHtml(messageText)}</div>
     `;
     
     container.appendChild(messageEl);
@@ -553,7 +557,7 @@ function removeMessageFromUI(messageId) {
     }
 }
 
-// 发送消息
+// 发送消息 - 修复：确保消息不被Base64处理
 async function sendMessage() {
     console.log('sendMessage 被调用');
     
@@ -608,11 +612,11 @@ async function sendMessage() {
             database = firebase.database();
         }
         
-        // 创建消息数据
+        // 修复：直接存储原始文本，不进行Base64编码
         const messageData = {
             userId: currentUser.userId,
             userName: currentUser.userName,
-            text: text,
+            text: text, // 直接存储原始文本
             timestamp: new Date().toISOString(),
             forum: currentForum
         };
@@ -672,8 +676,8 @@ function loadUsers() {
             users.forEach(user => {
                 html += `
                     <div class="user-list-item">
-                        <div class="user-avatar">${user.userName.charAt(0).toUpperCase()}</div>
-                        <div class="user-name">${escapeHtml(user.userName)}</div>
+                        <div class="user-avatar">${user.userName ? user.userName.charAt(0).toUpperCase() : '?'}</div>
+                        <div class="user-name">${escapeHtml(user.userName || '未知用户')}</div>
                         <div class="user-status"></div>
                     </div>
                 `;
@@ -683,7 +687,7 @@ function loadUsers() {
     });
 }
 
-// 设置事件监听
+// 设置事件监听 - 修复：只绑定一次事件
 function setupEventListeners() {
     console.log('设置事件监听器...');
     
@@ -700,9 +704,13 @@ function setupEventListeners() {
         return;
     }
     
+    console.log('找到输入框和发送按钮');
+    
+    // 修复1：只在这里绑定事件，删除HTML中的onclick
     // 发送按钮点击事件
-    sendButton.addEventListener('click', function() {
+    sendButton.addEventListener('click', function(e) {
         console.log('发送按钮被点击');
+        e.preventDefault(); // 防止重复触发
         sendMessage();
     });
     
