@@ -535,12 +535,18 @@ function addMessageToUI(message, messageId) {
     // 直接使用message.text，不做任何解码
     const messageText = message.text || '';
     
+    // 调试：看看原始 message.text 是什么
+    const debugText = JSON.stringify(message.text);
+    
     messageEl.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
             <div class="message-user">${escapeHtml(message.userName || '匿名用户')}</div>
             <div class="message-time">${time}</div>
         </div>
         <div>${escapeHtml(messageText)}</div>
+        <div style="font-size: 10px; opacity: 0.5; margin-top: 2px;">
+            [debug raw] ${escapeHtml(debugText || '')}
+        </div>
     `;
     
     container.appendChild(messageEl);
