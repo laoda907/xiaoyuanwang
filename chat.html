@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -237,12 +238,7 @@
 <body>
     <!-- 新版UI（需要保留） -->
     <div class="top-bar">
-        <h1>
-            校园网 · 暗夜聊天室
-            <span style="font-size: 12px; opacity: 0.6; margin-left: 6px;">
-                v20260130-01
-            </span>
-        </h1>
+        <h1>校园网 · 暗夜聊天室</h1>
         <a href="main.html" class="back-btn">← 返回主页</a>
     </div>
     
@@ -308,20 +304,6 @@ function encodeIPForFirebase(ip) {
     return ip.replace(/\./g, "_");
 }
 
-// ========= UTF-8 安全的 Base64 解码（统一版本）=========
-function safeAtob(str) {
-    try {
-        return decodeURIComponent(
-            atob(str).split('').map(function (c) {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join('')
-        );
-    } catch (e) {
-        console.error('解码失败:', e);
-        return null;
-    }
-}
-
 // ========== Firebase 配置 ==========
 const firebaseConfig = {
     apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
@@ -368,12 +350,7 @@ function checkLogin() {
     }
     
     try {
-        const decodedStr = safeAtob(sessionStr);
-        if (!decodedStr) {
-            throw new Error('解码失败');
-        }
-        
-        const sessionData = JSON.parse(decodedStr);
+        const sessionData = JSON.parse(sessionStr);
         if (Date.now() > sessionData.expiry) {
             localStorage.removeItem('xiaoyuan_session');
             window.location.href = 'index.html';
@@ -498,7 +475,6 @@ function loadMessages() {
     
     messagesRef = database.ref('forums/' + currentForum + '/messages');
     
-    // 【修复1】删除会导致重复显示的 once('value') 代码块
     // 只保留 on('child_added') 监听
     messagesRef.limitToLast(50).on('child_added', snapshot => {
         const message = snapshot.val();
@@ -517,7 +493,7 @@ function loadMessages() {
     });
 }
 
-// 添加消息到UI - 确保消息不被Base64处理
+// 添加消息到UI - 直接使用原始文本，不做任何处理
 function addMessageToUI(message, messageId) {
     const container = document.getElementById('messagesContainer');
     
@@ -532,11 +508,8 @@ function addMessageToUI(message, messageId) {
         minute: '2-digit' 
     }) : '刚刚';
     
-    // 直接使用message.text，不做任何解码
+    // 直接使用原始文本，不做任何编码/解码处理
     const messageText = message.text || '';
-    
-    // 调试：看看原始 message.text 是什么
-    const debugText = JSON.stringify(message.text);
     
     messageEl.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
@@ -544,9 +517,6 @@ function addMessageToUI(message, messageId) {
             <div class="message-time">${time}</div>
         </div>
         <div>${escapeHtml(messageText)}</div>
-        <div style="font-size: 10px; opacity: 0.5; margin-top: 2px;">
-            [debug raw] ${escapeHtml(debugText || '')}
-        </div>
     `;
     
     container.appendChild(messageEl);
@@ -561,7 +531,7 @@ function removeMessageFromUI(messageId) {
     }
 }
 
-// 发送消息 - 确保消息不被Base64处理
+// 发送消息 - 直接存储原始文本
 async function sendMessage() {
     console.log('sendMessage 被调用');
     
@@ -581,11 +551,8 @@ async function sendMessage() {
         const sessionStr = localStorage.getItem('xiaoyuan_session');
         if (sessionStr) {
             try {
-                const decodedStr = safeAtob(sessionStr);
-                if (decodedStr) {
-                    currentUser = JSON.parse(decodedStr);
-                    console.log('从存储恢复用户:', currentUser.userName);
-                }
+                currentUser = JSON.parse(sessionStr);
+                console.log('从存储恢复用户:', currentUser.userName);
             } catch (error) {
                 console.error('恢复用户失败:', error);
             }
@@ -616,7 +583,7 @@ async function sendMessage() {
             database = firebase.database();
         }
         
-        // 直接存储原始文本，不进行Base64编码
+        // 直接存储原始文本，不进行任何编码
         const messageData = {
             userId: currentUser.userId,
             userName: currentUser.userName,
@@ -745,13 +712,7 @@ function logout() {
         });
     }
 }
-</script>
-
-<div style="text-align:center;color:#888;font-size:12px;margin:10px 0;">
-    version: 20260130-01
-</div>
-
+    </script>
 </body>
 </html>
-    
-    
+```
