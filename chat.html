@@ -3,7 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>全新聊天室</title>
+  <title>全新升级聊天室</title>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-database.js"></script>
+
   <style>
     body {
       margin: 0;
@@ -18,11 +23,51 @@
     header {
       padding: 15px 20px;
       background: rgba(255, 255, 255, 0.05);
-      border-bottom: 1px solid rgba(255,255,255,0.1);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       font-size: 20px;
       font-weight: bold;
     }
 
+    /* 多广场按钮 */
+    #forumBar {
+      padding: 12px 20px;
+      background: rgba(255,255,255,0.05);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      display: flex;
+      gap: 10px;
+      font-size: 14px;
+    }
+
+    .forumBtn {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      background: #16213e;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .forumBtn.active {
+      background: #3498db !important;
+    }
+
+    /* 背景音乐栏 */
+    #bgmBar {
+      padding: 12px 20px;
+      background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      font-size: 14px;
+    }
+
+    #bgmSelect {
+      padding: 6px 10px;
+      border-radius: 5px;
+      background: #16213e;
+      color: #fff;
+      border: none;
+    }
+
+    /* 聊天区 */
     #chatArea {
       flex: 1;
       overflow-y: auto;
@@ -44,6 +89,7 @@
       margin-left: auto;
     }
 
+    /* 输入区 */
     #inputBar {
       display: flex;
       padding: 15px;
@@ -76,25 +122,30 @@
     }
   </style>
 </head>
+
 <body>
+
   <header>🔥 全新升级聊天室</header>
 
-  <!-- 三大广场切换 -->
-  <div id="forumBar" style="padding:12px 20px; background:rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; gap:10px; font-size:14px;">
-    <button class="forumBtn" data-f="general" style="padding:6px 12px; border:none; border-radius:6px; background:#3498db; color:#fff; cursor:pointer;">综合广场</button>
-    <button class="forumBtn" data-f="study" style="padding:6px 12px; border:none; border-radius:6px; background:#16213e; color:#fff; cursor:pointer;">学习广场</button>
-    <button class="forumBtn" data-f="fun" style="padding:6px 12px; border:none; border-radius:6px; background:#16213e; color:#fff; cursor:pointer;">娱乐广场</button>
-  </div>背景音乐选择 -->
-  <div style="padding:10px 20px; background:rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:10px;">
-    <label style="font-size:14px;">背景音乐：</label>
-    <select id="bgmSelect" style="padding:6px 10px; border-radius:5px; background:#16213e; color:#fff; border:none;">
-      <option value="none">关闭</option>
-      <option value="https://music.163.com/song/media/outer/url?id=22707000.mp3">穿越时空的思念（钢琴）</option>
+  <!-- 三大广场 -->
+  <div id="forumBar">
+    <button class="forumBtn active" data-f="general">综合广场</button>
+    <button class="forumBtn" data-f="study">学习广场</button>
+    <button class="forumBtn" data-f="fun">娱乐广场</button>
+  </div>
+
+  <!-- 背景音乐 -->
+  <div id="bgmBar">
+    背景音乐选择 →  
+    <select id="bgmSelect">
+      <option value="none">关闭音乐</option>
       <option value="https://music.163.com/song/media/outer/url?id=28907016.mp3">穿越时空的思念（原声）</option>
+      <option value="https://music.163.com/song/media/outer/url?id=22707000.mp3">穿越时空的思念（钢琴）</option>
       <option value="https://music.163.com/song/media/outer/url?id=1387202414.mp3">穿越时空的思念（治愈版）</option>
     </select>
   </div>
 
+  <!-- 播放器 -->
   <audio id="bgmPlayer" loop></audio>
 
   <div id="chatArea"></div>
@@ -104,106 +155,105 @@
     <button id="sendBtn">发送</button>
   </div>
 
-  <script>
-    const chatArea = document.getElementById("chatArea");
-    const input = document.getElementById("msgInput");
-    const btn = document.getElementById("sendBtn");
+  <!-- ==================== JavaScript ==================== -->
+<script>
+/* ---------------- Firebase 初始化 ---------------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
+  authDomain: "laoda907-22511.firebaseapp.com",
+  databaseURL: "https://laoda907-22511-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "laoda907-22511",
+  storageBucket: "laoda907-22511.appspot.com",
+  messagingSenderId: "176173610464",
+  appId: "1:176173610464:web:3ff86202f9b05f24b36785"
+};
 
-    function addMsg(text, self = false) {
-      const div = document.createElement("div");
-      div.className = "msg" + (self ? " me" : "");
-      div.textContent = text;
-      chatArea.appendChild(div);
-      chatArea.scrollTop = chatArea.scrollHeight;
-    }
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-    btn.onclick = send;
-    input.onkeydown = (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        send();
-      }
-    };
+/* ---------------- 全局变量 ---------------- */
+let forum = "general"; // 当前广场
+const chatArea = document.getElementById("chatArea");
+const input = document.getElementById("msgInput");
+const btn = document.getElementById("sendBtn");
 
-    function send() {
-      let text = input.value.trim();
-      if (!text) return;
+const currentUserId = "user_" + Math.random().toString(36).slice(2, 9);
 
-      addMsg(text, true);
-      input.value = "";
-      input.focus();
+/* ---------------- 背景音乐 ---------------- */
+const bgmPlayer = document.getElementById("bgmPlayer");
+const bgmSelect = document.getElementById("bgmSelect");
 
-      // TODO: 在这里集成 Firebase 或服务器发送逻辑
-    }
-  
-    // ===== 背景音乐控制 =====
-    const bgmPlayer = document.getElementById("bgmPlayer");
-    const bgmSelect = document.getElementById("bgmSelect");
+bgmSelect.onchange = () => {
+  const url = bgmSelect.value;
+  if (url === "none") {
+    bgmPlayer.pause();
+  } else {
+    bgmPlayer.src = url;
+    bgmPlayer.volume = 0.5;
+    bgmPlayer.play();
+  }
+};
 
-    bgmSelect.onchange = () => {
-      const url = bgmSelect.value;
-      if (url === "none") {
-        bgmPlayer.pause();
-      } else {
-        bgmPlayer.src = url;
-        bgmPlayer.volume = 0.5;
-        bgmPlayer.play();
-      }
-    };
+/* ---------------- 显示消息 ---------------- */
+function addMsg(text, self = false) {
+  const div = document.createElement("div");
+  div.className = "msg" + (self ? " me" : "");
+  div.textContent = text;
+  chatArea.appendChild(div);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
 
-    // ===== Firebase 集成 =====
-    const firebaseConfig = {
-      apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
-      authDomain: "laoda907-22511.firebaseapp.com",
-      databaseURL: "https://laoda907-22511-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "laoda907-22511",
-      storageBucket: "laoda907-22511.appspot.com",
-      messagingSenderId: "176173610464",
-      appId: "1:176173610464:web:3ff86202f9b05f24b36785"
-    };
+/* ---------------- 加载消息 ---------------- */
+function loadMessages() {
+  chatArea.innerHTML = "";
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    const forlet forum ="; // 默认论坛，可扩展
-
-    function function loadMessages() {
-      chatArea.innerHTML = "";
-      db.ref(`forums/${forum}/messages`).limitToLast(300).on("child_added", snap => {
-        const msg = snap.val();
-        addMsg(msg.text, msg.userId === currentUserId);
-      });
-    }  db.ref(`forums/${forum}/messages`).limitToLast(50).on("child_added", snap => {
-        const msg = snap.val();
-        addMsg(msg.text, msg.userId === currentUserId);
-      });
-    }
-
-    function function sendToServer(text) {
-      db.ref(`forums/${forum}/messages`).push({
-        userId: currentUserId,
-        text,
-        timestamp: Date.now()
-      });
-    }      db.ref(`forums/${forum}/messages`).push({
-        userId: currentUserId,
-        text,
-        timestamp: Date.now()
-      });
-    }
-
-    const currentUserId = "user_" + Math.random().toString(36).substr(2, 9);
-    loadMessages();
-    
-</script>
-    // ===== 多广场切换功能 =====
-    document.querySelectorAll('.forumBtn').forEach(btn => {
-      btn.onclick = () => {
-        document.querySelectorAll('.forumBtn').forEach(b => b.style.background = '#16213e');
-        btn.style.background = '#3498db';
-        forum = btn.dataset.f;
-        loadMessages();
-      };
+  db.ref(`forums/${forum}/messages`)
+    .limitToLast(200)
+    .on("child_added", snap => {
+      const msg = snap.val();
+      addMsg(msg.text, msg.userId === currentUserId);
     });
+}
 
-</script></html>
+/* ---------------- 发送消息 ---------------- */
+function sendMessage() {
+  let text = input.value.trim();
+  if (!text) return;
+
+  db.ref(`forums/${forum}/messages`).push({
+    userId: currentUserId,
+    text,
+    timestamp: Date.now()
+  });
+
+  input.value = "";
+  addMsg(text, true);
+}
+
+/* ---------------- 事件绑定 ---------------- */
+btn.onclick = sendMessage;
+
+input.onkeydown = (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+};
+
+/* ---------------- 广场切换 ---------------- */
+document.querySelectorAll(".forumBtn").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll(".forumBtn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    forum = btn.dataset.f;
+    loadMessages();
+  };
+});
+
+/* ---------------- 初始化加载 ---------------- */
+loadMessages();
+
+</script>
+
+</body>
+</html>
