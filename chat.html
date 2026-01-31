@@ -299,6 +299,20 @@
     </div>
 
     <script>
+// ========= UTF-8 安全的 Base64 解码（与 main.html 保持一致）=========
+function safeAtob(str) {
+    try {
+        return decodeURIComponent(
+            atob(str).split('').map(function (c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join('')
+        );
+    } catch (e) {
+        console.error('解码失败:', e);
+        return null;
+    }
+}
+
 // ========= 安全IP编码 =========
 function encodeIPForFirebase(ip) {
     return ip.replace(/\./g, "_");
@@ -353,7 +367,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let session;
     try {
-        session = JSON.parse(str);
+        // 使用与 main.html 相同的安全解码方式
+        const decodedStr = safeAtob(str);
+        if (!decodedStr) {
+            throw new Error('解码失败');
+        }
+        
+        session = JSON.parse(decodedStr);
         if (Date.now() > session.expiry) {
             localStorage.removeItem('xiaoyuan_session');
             window.location.href = 'index.html';
