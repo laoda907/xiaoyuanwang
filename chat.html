@@ -1,207 +1,204 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>全新升级聊天室</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>全新升级聊天室</title>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-database.js"></script>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-database.js"></script>
 
-  <style>
-    body {
-      margin: 0;
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      background: #1a1a2e;
-      color: #fff;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
+<style>
+/* ======== 全局 UI ======== */
+body {
+  margin: 0;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: #1a1a2e;
+  color: #fff;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+header {
+  padding: 15px 20px;
+  background: rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  font-size: 20px;
+  font-weight: bold;
+}
 
-    header {
-      padding: 15px 20px;
-      background: rgba(255, 255, 255, 0.05);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      font-size: 20px;
-      font-weight: bold;
-      z-index: 3;
-    }
+/* ======== 广场栏 ======== */
+#forumBar {
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.forumBtn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  background: #16213e;
+  color: #fff;
+  cursor: pointer;
+}
+.forumBtn.active { background: #3498db !important; }
+#onlineCount {
+  margin-left: auto;
+  opacity: 0.85;
+  font-size: 14px;
+}
 
-    #forumBar {
-      padding: 12px 20px;
-      background: rgba(255,255,255,0.05);
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      display: flex;
-      gap: 10px;
-      font-size: 14px;
-      z-index: 3;
-    }
+/* ======== 音乐栏 ======== */
+#bgmBar {
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+#bgmSelect {
+  padding: 6px 10px;
+  border-radius: 5px;
+  background: #16213e;
+  color: #fff;
+  border: none;
+}
 
-    .forumBtn {
-      padding: 6px 12px;
-      border: none;
-      border-radius: 6px;
-      background: #16213e;
-      color: #fff;
-      cursor: pointer;
-    }
+/* ======== 聊天区域 ======== */
+#chatArea {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
 
-    .forumBtn.active {
-      background: #3498db !important;
-    }
+/* ======== 消息布局 ======== */
+.msgWrapper {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+.msgWrapper.me { justify-content: flex-end; }
 
-    #bgmBar {
-      padding: 12px 20px;
-      background: rgba(255,255,255,0.03);
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      z-index: 3;
-    }
+/* ========== 渐变光圈头像 ========== */
+.avatarWrapper {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  padding: 3px;
+  background: conic-gradient(from 0deg, #8bd3ff, #b28bff, #ff8bd4, #8bd3ff);
+  animation: rotateGlow 4s linear infinite;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+@keyframes rotateGlow {
+  0%{transform:rotate(0deg);}
+  100%{transform:rotate(360deg);}
+}
+.msgWrapper.me .avatarWrapper {
+  margin-left: 10px;
+  margin-right: 0;
+}
+.avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:18px;
+  font-weight:bold;
+  color:white;
+}
 
-    #bgmSelect {
-      padding: 6px 10px;
-      border-radius: 5px;
-      background: #16213e;
-      color: #fff;
-      border: none;
-    }
+/* ======== 消息气泡 ======== */
+.msgBubble {
+  max-width: 70%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: rgba(255,255,255,0.08);
+}
+.msgWrapper.me .msgBubble {
+  background: rgba(52,152,219,0.3);
+}
+.msgName {
+  font-size: 12px;
+  opacity: 0.7;
+  margin-bottom: 3px;
+}
 
-    #chatArea {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px;
-      z-index: 3;
-    }
+/* ======== 输入栏 ======== */
+#inputBar {
+  display: flex;
+  padding: 15px;
+  background: rgba(255,255,255,0.05);
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+#msgInput {
+  flex:1;
+  padding:12px;
+  background:rgba(255,255,255,0.15);
+  border:none;
+  border-radius:8px;
+  color:white;
+  font-size:16px;
+  outline:none;
+}
+#sendBtn {
+  margin-left:10px;
+  padding:12px 20px;
+  background:#3498db;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  color:white;
+}
 
-    /* 聊天布局 */
-    .msgWrapper {
-      display: flex;
-      align-items: flex-start;
-      margin-bottom: 14px;
-    }
-
-    .msgWrapper.me {
-      justify-content: flex-end;
-    }
-
-    /* 🌈 头像及渐变光圈 */
-    .avatarWrapper {
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      padding: 3px;
-      background: conic-gradient(from 0deg, #8bd3ff, #b28bff, #ff8bd4, #8bd3ff);
-      animation: rotateGlow 4s linear infinite;
-      margin-right: 10px;
-      flex-shrink: 0;
-    }
-
-    @keyframes rotateGlow {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    .msgWrapper.me .avatarWrapper {
-      margin-left: 10px;
-      margin-right: 0;
-    }
-
-    .avatar {
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      color: white;
-      font-size: 18px;
-      font-weight: bold;
-      user-select: none;
-    }
-
-    .msgBubble {
-      max-width: 70%;
-      padding: 10px 14px;
-      border-radius: 10px;
-      background: rgba(255,255,255,0.08);
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-
-    .msgWrapper.me .msgBubble {
-      background: rgba(52,152,219,0.3);
-    }
-
-    .msgName {
-      font-size: 12px;
-      opacity: 0.7;
-      margin-bottom: 3px;
-    }
-
-    /* 输入栏 */
-    #inputBar {
-      display: flex;
-      padding: 15px;
-      background: rgba(255,255,255,0.05);
-      border-top: 1px solid rgba(255,255,255,0.1);
-      z-index: 3;
-    }
-
-    #msgInput {
-      flex: 1;
-      padding: 12px;
-      border: none;
-      border-radius: 8px;
-      background: rgba(255,255,255,0.15);
-      color: #fff;
-      font-size: 16px;
-      resize: none;
-      outline: none;
-      white-space: pre-wrap;
-    }
-
-    #sendBtn {
-      margin-left: 10px;
-      padding: 12px 20px;
-      background: #3498db;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      cursor: pointer;
-      color: #fff;
-    }
-
-    /* Canvas 雪花层 */
-    #snowCanvas {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      pointer-events: none;
-      z-index: 1;
-    }
-  </style>
+/* ========== DOM 雪花（亮晶晶不卡） ========== */
+.snowflake {
+  position: fixed;
+  top: -10px;
+  color: white;
+  font-size: 12px;
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 9999;
+  filter: drop-shadow(0 0 6px rgba(255,255,255,0.9));
+  animation: fallSnow linear forwards, flicker 2s ease-in-out infinite;
+}
+@keyframes fallSnow {
+  0% { transform: translateY(0) rotate(0deg);}
+  100% { transform: translateY(110vh) rotate(360deg);}
+}
+@keyframes flicker {
+  0%,100%{opacity:0.9;}
+  50%{opacity:0.6;}
+}
+</style>
 </head>
 
 <body>
 
-<canvas id="snowCanvas"></canvas>
-
 <header>🔥 全新升级聊天室</header>
 
+<!-- ======== 广场按钮 + 在线人数 A1 ======== -->
 <div id="forumBar">
   <button class="forumBtn active" data-f="general">综合广场</button>
   <button class="forumBtn" data-f="study">学习广场</button>
   <button class="forumBtn" data-f="fun">娱乐广场</button>
+
+  <!-- 在线人数 A1 -->
+  <div id="onlineCount">👥 在线：0 人</div>
 </div>
 
+<!-- ======== 背景音乐 + 下雪 ======== -->
 <div id="bgmBar">
   <span>背景音乐：</span>
   <select id="bgmSelect">
@@ -211,13 +208,13 @@
   </select>
 
   <button id="snowToggle" style="
-      padding: 6px 12px;
-      margin-left: 10px;
-      border-radius: 6px;
-      border: none;
-      background: #3498db;
-      color: white;
-      cursor: pointer;
+      padding:6px 12px;
+      margin-left:10px;
+      border:none;
+      border-radius:6px;
+      background:#3498db;
+      color:white;
+      cursor:pointer;
   ">❄ 下雪</button>
 </div>
 
@@ -231,99 +228,91 @@
 </div>
 
 <script>
-/* ========== 用户登录信息读取 ========== */
-function getUserSession() {
+/* ========= 用户登录解析 ========= */
+function getUserSession(){
   const str = localStorage.getItem("xiaoyuan_session");
-  if (!str) return null;
-
-  try {
-    const decoded = atob(str).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('');
-    return JSON.parse(decodeURIComponent(decoded));
-  } catch (e) { return null; }
+  if(!str) return null;
+  try{
+    const dec = atob(str).split('')
+      .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('');
+    return JSON.parse(decodeURIComponent(dec));
+  }catch(e){ return null;}
 }
-
 const SESSION = getUserSession();
 const USER_NAME = SESSION ? SESSION.userName : "匿名用户";
-const USER_ID = SESSION ? SESSION.userId : ("user_" + Math.random().toString(36).slice(2, 10));
+const USER_ID = SESSION ? SESSION.userId : ("user_"+Math.random().toString(36).slice(2,10));
 
-/* ========== Firebase ========== */
+/* ========= Firebase ========= */
 const firebaseConfig = {
-  apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
-  authDomain: "laoda907-22511.firebaseapp.com",
-  databaseURL: "https://laoda907-22511-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "laoda907-22511",
-  storageBucket: "laoda907-22511.appspot.com",
-  messagingSenderId: "176173610464",
-  appId: "1:176173610464:web:3ff86202f9b05f24b36785"
+  apiKey:"AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
+  authDomain:"laoda907-22511.firebaseapp.com",
+  databaseURL:"https://laoda907-22511-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"laoda907-22511",
+  storageBucket:"laoda907-22511.appspot.com",
+  messagingSenderId:"176173610464",
+  appId:"1:176173610464:web:3ff86202f9b05f24b36785"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-/* ========== DOM ========== */
+/* ========= DOM ========= */
 let forum = "general";
 const chatArea = document.getElementById("chatArea");
 const input = document.getElementById("msgInput");
 const sendBtn = document.getElementById("sendBtn");
-const forumButtons = document.querySelectorAll(".forumBtn");
+const onlineCount = document.getElementById("onlineCount");
 
-/* ========== 清理控制符 ========== */
-function cleanText(text) {
-  return text.replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, "");
+function cleanText(t){
+  return t.replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g,"");
 }
 
-/* ========== 头像系统 ========== */
-function getAvatarLetter(name) { return name[0]; }
-function getAvatarColor(name) {
-  const colors = ["#3498db","#9b59b6","#e67e22","#e91e63","#1abc9c","#f39c12"];
-  let sum = 0; for (let i = 0; i < name.length; i++) sum += name.charCodeAt(i);
-  return colors[sum % colors.length];
+/* ========== 头像生成 ========== */
+function getAvatarLetter(name){ return name[0]; }
+function getAvatarColor(name){
+  const c=["#3498db","#9b59b6","#e67e22","#e91e63","#1abc9c","#f39c12"];
+  let s=0; for(let i=0;i<name.length;i++) s+=name.charCodeAt(i);
+  return c[s % c.length];
 }
 
 /* ========== 显示消息 ========== */
-function addMsg(msg) {
+function addMsg(msg){
   const isOwn = msg.userId === USER_ID;
 
-  const wrapper = document.createElement("div");
-  wrapper.className = "msgWrapper" + (isOwn ? " me" : "");
+  const wrap = document.createElement("div");
+  wrap.className = "msgWrapper" + (isOwn ? " me":"");
 
-  const avatarW = document.createElement("div");
-  avatarW.className = "avatarWrapper";
-
-  const avatar = document.createElement("div");
-  avatar.className = "avatar";
-  avatar.style.background = getAvatarColor(msg.userName);
-  avatar.textContent = getAvatarLetter(msg.userName);
-
-  avatarW.appendChild(avatar);
+  const avW = document.createElement("div");
+  avW.className = "avatarWrapper";
+  const av = document.createElement("div");
+  av.className = "avatar";
+  av.style.background = getAvatarColor(msg.userName);
+  av.textContent = getAvatarLetter(msg.userName);
+  avW.appendChild(av);
 
   const bubble = document.createElement("div");
   bubble.className = "msgBubble";
+  const name = document.createElement("div");
+  name.className = "msgName";
+  name.textContent = msg.userName;
+  const text = document.createElement("div");
+  text.textContent = msg.text;
+  bubble.appendChild(name);
+  bubble.appendChild(text);
 
-  const nameTag = document.createElement("div");
-  nameTag.className = "msgName";
-  nameTag.textContent = msg.userName;
-
-  const textTag = document.createElement("div");
-  textTag.textContent = msg.text;
-
-  bubble.appendChild(nameTag);
-  bubble.appendChild(textTag);
-
-  if (isOwn) {
-    wrapper.appendChild(bubble);
-    wrapper.appendChild(avatarW);
+  if(isOwn){
+    wrap.appendChild(bubble);
+    wrap.appendChild(avW);
   } else {
-    wrapper.appendChild(avatarW);
-    wrapper.appendChild(bubble);
+    wrap.appendChild(avW);
+    wrap.appendChild(bubble);
   }
 
-  chatArea.appendChild(wrapper);
+  chatArea.appendChild(wrap);
   chatArea.scrollTop = chatArea.scrollHeight;
 }
 
-/* ========== 智能过滤（不误伤单字） ========== */
-const SMART_BAD_WORD_PATTERNS = [
+/* ========== 敏感词过滤 ========== */
+const SMART_BAD = [
   /操你妈|草你妈|艹你妈|我操你妈/gi,
   /傻逼|沙比|煞笔|傻屌|傻叼/gi,
   /妈的|他妈的/gi,
@@ -336,140 +325,131 @@ const SMART_BAD_WORD_PATTERNS = [
   /\bnm[\s\.\-\*_]*sl\b/gi,
   /\bnmsl\b/gi
 ];
-
-function smartFilter(text) {
-  SMART_BAD_WORD_PATTERNS.forEach(p => {
-    text = text.replace(p, m => "*".repeat(m.length));
+function smartFilter(t){
+  SMART_BAD.forEach(p=>{
+    t=t.replace(p,m=>"*".repeat(m.length));
   });
-  return text;
+  return t;
 }
 
 /* ========== 加载消息 ========== */
-let currentMessagesRef = null;
+let msgRef = null;
+function loadForum(){
+  chatArea.innerHTML="";
+  if(msgRef) msgRef.off();
 
-function attachMessagesListener() {
-  chatArea.innerHTML = "";
-
-  if (currentMessagesRef) currentMessagesRef.off();
-
-  const ref = db.ref("forums/" + forum + "/messages");
-  currentMessagesRef = ref;
-
-  ref.limitToLast(200).on("child_added", snap => {
-    const msg = snap.val();
+  msgRef = db.ref("forums/"+forum+"/messages");
+  msgRef.limitToLast(200).on("child_added",snap=>{
+    const m = snap.val();
     addMsg({
-      userId: msg.userId,
-      userName: msg.userName,
-      text: cleanText(msg.text)
+      userId:m.userId,
+      userName:m.userName,
+      text:cleanText(m.text)
     });
   });
 }
 
-/* ========== 发送消息 ========== */
-function sendMessage() {
-  let raw = input.value;
-  let text = cleanText(raw.trim());
-  if (!text) return;
+/* ========== 发送 ========== */
+sendBtn.onclick = sendMessage;
+function sendMessage(){
+  let t = cleanText(input.value.trim());
+  if(!t) return;
 
-  text = smartFilter(text);
+  t = smartFilter(t);
 
-  db.ref("forums/" + forum + "/messages").push({
-    userId: USER_ID,
-    userName: USER_NAME,
-    text: text,
-    timestamp: Date.now()
+  db.ref("forums/"+forum+"/messages").push({
+    userId:USER_ID,
+    userName:USER_NAME,
+    text:t,
+    timestamp:Date.now()
   });
 
-  input.value = "";
-  input.focus();
+  input.value="";
 }
 
-sendBtn.addEventListener("click", sendMessage);
-
-/* ========== 广场切换 ========== */
-forumButtons.forEach(btn => {
-  btn.onclick = () => {
-    forumButtons.forEach(b => b.classList.remove("active"));
+/* ========== 切换广场 ========== */
+document.querySelectorAll(".forumBtn").forEach(btn=>{
+  btn.onclick = ()=>{
+    document.querySelectorAll(".forumBtn").forEach(b=>b.classList.remove("active"));
     btn.classList.add("active");
     forum = btn.getAttribute("data-f");
-    attachMessagesListener();
+    updatePresence();
+    loadForum();
   };
 });
 
-attachMessagesListener();
+loadForum();
 
 /* ========== 背景音乐 ========== */
 const bgmPlayer = document.getElementById("bgmPlayer");
-document.getElementById("bgmSelect").onchange = () => {
-  if (bgmSelect.value === "none") bgmPlayer.pause();
-  else { bgmPlayer.src = bgmSelect.value; bgmPlayer.play(); }
+document.getElementById("bgmSelect").onchange = ()=>{
+  let v = bgmSelect.value;
+  if(v==="none") bgmPlayer.pause();
+  else{ bgmPlayer.src=v; bgmPlayer.play(); }
 };
 
-/* ========== ❄ Canvas GPU 雪花（不卡版本） ========== */
-const canvas = document.getElementById("snowCanvas");
-const ctx = canvas.getContext("2d");
-let W = canvas.width = window.innerWidth;
-let H = canvas.height = window.innerHeight;
+/* ========== DOM 雪花（不卡） ========== */
+let snowEnabled=false;
+let snowTimer=null;
+let snowCount=0;
+const SNOW_MAX=35;
 
-window.onresize = () => {
-  W = canvas.width = window.innerWidth;
-  H = canvas.height = window.innerHeight;
+document.getElementById("snowToggle").onclick = ()=>{
+  snowEnabled=!snowEnabled;
+  snowToggle.textContent = snowEnabled?"❄ 关闭下雪":"❄ 下雪";
+  if(snowEnabled) startSnow();
+  else stopSnow();
 };
 
-let snowEnabled = false;
-let snowflakes = [];
+function createSnow(){
+  if(!snowEnabled || snowCount>=SNOW_MAX) return;
 
-function createSnowflake() {
-  return {
-    x: Math.random() * W,
-    y: Math.random() * -50,
-    r: Math.random() * 3 + 1,
-    d: Math.random() * 1 + 0.5,
-    drift: Math.random() * 2 - 1
-  };
+  const s=document.createElement("div");
+  s.className="snowflake";
+  s.textContent="❄";
+
+  const size=Math.random()*12+8;
+  s.style.fontSize=size+"px";
+  s.style.left=Math.random()*100+"vw";
+  const dur=Math.random()*5+6;
+  s.style.animationDuration=dur+"s";
+
+  document.body.appendChild(s);
+  snowCount++;
+
+  setTimeout(()=>{
+    s.remove();
+    snowCount--;
+  },dur*1000);
+}
+function startSnow(){
+  if(snowTimer) return;
+  snowTimer=setInterval(createSnow,300);
+}
+function stopSnow(){
+  clearInterval(snowTimer);
+  snowTimer=null;
 }
 
-function drawSnow() {
-  ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = "white";
-  ctx.shadowBlur = 8;
-  ctx.shadowColor = "white";
+/* ========== 在线人数（方案B + 显示方式A1） ========== */
+let presenceRef = null;
 
-  snowflakes.forEach(f => {
-    ctx.beginPath();
-    ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
-    ctx.fill();
+function updatePresence(){
+  if(presenceRef) presenceRef.remove();
+
+  const userPath = "presence/"+forum+"/"+USER_ID;
+  presenceRef = db.ref(userPath);
+
+  presenceRef.onDisconnect().remove();
+  presenceRef.set(true);
+
+  db.ref("presence/"+forum).on("value",snap=>{
+    const count = snap.numChildren();
+    onlineCount.textContent = "👥 在线："+count+" 人";
   });
 }
 
-function updateSnow() {
-  snowflakes.forEach(f => {
-    f.y += f.d;
-    f.x += f.drift * 0.3;
-
-    if (f.y > H) {
-      f.x = Math.random() * W;
-      f.y = -10;
-    }
-  });
-}
-
-function snowLoop() {
-  if (snowEnabled) {
-    if (snowflakes.length < 200) snowflakes.push(createSnowflake());
-    drawSnow();
-    updateSnow();
-  }
-  requestAnimationFrame(snowLoop);
-}
-
-snowLoop();
-
-document.getElementById("snowToggle").onclick = () => {
-  snowEnabled = !snowEnabled;
-  document.getElementById("snowToggle").textContent =
-    snowEnabled ? "❄ 关闭下雪" : "❄ 下雪";
-};
+updatePresence();
 </script>
 
 </body>
