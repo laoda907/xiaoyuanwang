@@ -79,7 +79,12 @@
 <body>
   <header>🔥 全新升级聊天室</header>
 
-  <!-- 背景音乐选择 -->
+  <!-- 三大广场切换 -->
+  <div id="forumBar" style="padding:12px 20px; background:rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; gap:10px; font-size:14px;">
+    <button class="forumBtn" data-f="general" style="padding:6px 12px; border:none; border-radius:6px; background:#3498db; color:#fff; cursor:pointer;">综合广场</button>
+    <button class="forumBtn" data-f="study" style="padding:6px 12px; border:none; border-radius:6px; background:#16213e; color:#fff; cursor:pointer;">学习广场</button>
+    <button class="forumBtn" data-f="fun" style="padding:6px 12px; border:none; border-radius:6px; background:#16213e; color:#fff; cursor:pointer;">娱乐广场</button>
+  </div>背景音乐选择 -->
   <div style="padding:10px 20px; background:rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:10px;">
     <label style="font-size:14px;">背景音乐：</label>
     <select id="bgmSelect" style="padding:6px 10px; border-radius:5px; background:#16213e; color:#fff; border:none;">
@@ -160,17 +165,27 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const forum = "general"; // 默认论坛，可扩展
+    const forlet forum ="; // 默认论坛，可扩展
 
-    function loadMessages() {
-      db.ref(`forums/${forum}/messages`).limitToLast(50).on("child_added", snap => {
+    function function loadMessages() {
+      chatArea.innerHTML = "";
+      db.ref(`forums/${forum}/messages`).limitToLast(300).on("child_added", snap => {
+        const msg = snap.val();
+        addMsg(msg.text, msg.userId === currentUserId);
+      });
+    }  db.ref(`forums/${forum}/messages`).limitToLast(50).on("child_added", snap => {
         const msg = snap.val();
         addMsg(msg.text, msg.userId === currentUserId);
       });
     }
 
-    function sendToServer(text) {
+    function function sendToServer(text) {
       db.ref(`forums/${forum}/messages`).push({
+        userId: currentUserId,
+        text,
+        timestamp: Date.now()
+      });
+    }      db.ref(`forums/${forum}/messages`).push({
         userId: currentUserId,
         text,
         timestamp: Date.now()
@@ -181,5 +196,14 @@
     loadMessages();
     
 </script>
-</body>
-</html>
+    // ===== 多广场切换功能 =====
+    document.querySelectorAll('.forumBtn').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('.forumBtn').forEach(b => b.style.background = '#16213e');
+        btn.style.background = '#3498db';
+        forum = btn.dataset.f;
+        loadMessages();
+      };
+    });
+
+</script></html>
