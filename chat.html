@@ -339,57 +339,52 @@ function escapeHtml(text) {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('聊天页面加载');
     
-    // 🔧 1. 删除旧的同步登录检查逻辑
-    // 不再调用 checkLogin()
-    
-    // 🔧 2. 改为使用 Firebase 官方推荐的异步登录检测
+    // 步骤1: 初始化 Firebase
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
     }
     
-    // 初始化 Firebase Authentication
-    const auth = firebase.auth();
+    // 步骤2: 读取 localStorage session
+    const sessionStr = localStorage.getItem('xiaoyuan_session');
+    if (!sessionStr) {
+        // 步骤3: 没有 session → 跳到 index.html
+        console.log('没有找到 session，跳转到登录页');
+        window.location.href = "index.html";
+        return;
+    }
     
-    // 等待 Firebase 恢复登录状态
-    auth.onAuthStateChanged(user => {
-        console.log('Firebase 登录状态变更:', user ? '已登录' : '未登录');
-        
-        if (!user) {
-            // 未登录，跳转到登录页
-            console.log('用户未登录，跳转到登录页');
-            window.location.href = "index.html";
-        } else {
-            // 🔧 从 localStorage 获取用户信息用于显示
-            const sessionStr = localStorage.getItem('xiaoyuan_session');
-            if (sessionStr) {
-                try {
-                    const sessionData = JSON.parse(sessionStr);
-                    currentUser = {
-                        userId: sessionData.userId || user.uid,
-                        userName: sessionData.userName || user.email || '用户',
-                        expiry: sessionData.expiry || Date.now() + 7 * 24 * 60 * 60 * 1000
-                    };
-                    console.log('从 session 恢复用户信息:', currentUser.userName);
-                } catch (error) {
-                    console.error('解析 session 失败:', error);
-                    currentUser = {
-                        userId: user.uid,
-                        userName: user.email || '用户'
-                    };
-                }
-            } else {
-                // 如果没有 localStorage session，使用 Firebase 用户信息
-                currentUser = {
-                    userId: user.uid,
-                    userName: user.email || '用户'
-                };
-            }
-            
-            // 🔧 4. 登录成功，开始初始化聊天
-            console.log('用户登录成功，开始初始化聊天');
-            initChat();
-        }
-    });
+    let sessionData;
+    try {
+        // 步骤4: 用 JSON.parse 解析 session（不使用 Base64）
+        sessionData = JSON.parse(sessionStr);
+    } catch (error) {
+        // 步骤5: 解析失败 → 删除 session → 跳到 index.html
+        console.error('解析 session 失败:', error);
+        localStorage.removeItem('xiaoyuan_session');
+        window.location.href = "index.html";
+        return;
+    }
+    
+    // 检查是否过期
+    if (sessionData.expiry && Date.now() > sessionData.expiry) {
+        // 步骤5: 过期 → 删除 session → 跳到 index.html
+        console.log('session 已过期');
+        localStorage.removeItem('xiaoyuan_session');
+        window.location.href = "index.html";
+        return;
+    }
+    
+    // 步骤6: 从 session 生成 currentUser
+    currentUser = {
+        userId: sessionData.userId,
+        userName: sessionData.userName || '用户',
+        expiry: sessionData.expiry
+    };
+    
+    console.log('从 session 恢复用户信息:', currentUser.userName);
+    
+    // 步骤7: 最后执行 initChat()
+    initChat();
 });
 
 // 初始化聊天
@@ -579,21 +574,9 @@ async function sendMessage() {
     
     // 检查用户状态
     if (!currentUser || !currentUser.userId) {
-        console.log('currentUser 不存在，尝试从 Firebase 恢复');
-        const auth = firebase.auth();
-        const user = auth.currentUser;
-        
-        if (user) {
-            currentUser = {
-                userId: user.uid,
-                userName: user.email || '用户'
-            };
-            console.log('从 Firebase 恢复用户:', currentUser.userName);
-        } else {
-            alert('会话已过期，请重新登录');
-            window.location.href = 'index.html';
-            return;
-        }
+        alert('会话已过期，请重新登录');
+        window.location.href = 'index.html';
+        return;
     }
     
     // 禁用按钮防止重复发送
@@ -737,12 +720,9 @@ function setupEventListeners() {
 function logout() {
     if (confirm('确定要退出登录吗？')) {
         updateUserStatus(false).then(() => {
-            // 使用 Firebase 退出登录
-            firebase.auth().signOut().then(() => {
-                // 同时清除 localStorage
-                localStorage.removeItem('xiaoyuan_session');
-                window.location.href = 'index.html';
-            });
+            // 只清除 localStorage session，不再进行 Firebase signOut
+            localStorage.removeItem('xiaoyuan_session');
+            window.location.href = 'index.html';
         });
     }
 }
