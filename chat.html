@@ -303,6 +303,20 @@ function encodeIPForFirebase(ip) {
     return ip.replace(/\./g, "_");
 }
 
+// ========= UTF-8 安全的 Base64 解码（与index.html/main.html统一）=========
+function safeAtob(str) {
+    try {
+        return decodeURIComponent(
+            atob(str).split('').map(function (c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join('')
+        );
+    } catch (e) {
+        console.error('解码失败:', e);
+        return null;
+    }
+}
+
 // ========== Firebase 配置 ==========
 const firebaseConfig = {
     apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
@@ -334,36 +348,42 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// 页面加载
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('聊天页面加载');
-    checkLogin();
-});
-
-// 检查登录状态
+// 检查登录状态 - 修复版本
 function checkLogin() {
     const sessionStr = localStorage.getItem('xiaoyuan_session');
     if (!sessionStr) {
+        console.log('未找到session，跳转到登录页');
         window.location.href = 'index.html';
-        return;
+        return false;
     }
     
     try {
-        const sessionData = JSON.parse(sessionStr);
-        if (Date.now() > sessionData.expiry) {
+        // 使用安全的Base64解码
+        const decodedStr = safeAtob(sessionStr);
+        if (!decodedStr) {
+            console.error('session解码失败');
             localStorage.removeItem('xiaoyuan_session');
             window.location.href = 'index.html';
-            return;
+            return false;
+        }
+        
+        const sessionData = JSON.parse(decodedStr);
+        if (Date.now() > sessionData.expiry) {
+            console.log('session已过期');
+            localStorage.removeItem('xiaoyuan_session');
+            window.location.href = 'index.html';
+            return false;
         }
         
         currentUser = sessionData;
         console.log('用户已登录:', currentUser.userName);
-        initChat();
+        return true;
         
     } catch (error) {
         console.error('会话验证失败:', error);
         localStorage.removeItem('xiaoyuan_session');
         window.location.href = 'index.html';
+        return false;
     }
 }
 
@@ -556,8 +576,11 @@ async function sendMessage() {
         const sessionStr = localStorage.getItem('xiaoyuan_session');
         if (sessionStr) {
             try {
-                currentUser = JSON.parse(sessionStr);
-                console.log('从存储恢复用户:', currentUser.userName);
+                const decodedStr = safeAtob(sessionStr);
+                if (decodedStr) {
+                    currentUser = JSON.parse(decodedStr);
+                    console.log('从存储恢复用户:', currentUser.userName);
+                }
             } catch (error) {
                 console.error('恢复用户失败:', error);
             }
@@ -717,6 +740,20 @@ function logout() {
         });
     }
 }
+
+// 🔧 修改后的页面加载流程
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('聊天页面加载');
+    
+    // 1. 先检查登录状态（使用localStorage）
+    if (!checkLogin()) {
+        // checkLogin内部已经处理跳转
+        return;
+    }
+    
+    // 2. 如果登录检查通过，初始化聊天
+    initChat();
+});
     </script>
 </body>
 </html>
