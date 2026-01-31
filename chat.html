@@ -398,7 +398,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 设置当前用户
     currentUser = {
         userId: session.userId,
-        userName: session.name || session.userName,
+        userName: session.name || session.userName || "未知用户",
         expiry: session.expiry
     };
 
@@ -413,7 +413,7 @@ async function initChat() {
         
         // 显示用户信息
         document.getElementById('currentUserName').textContent = currentUser.userName;
-        document.getElementById('userAvatar').textContent = currentUser.userName.charAt(0).toUpperCase();
+        document.getElementById('userAvatar').textContent = (currentUser.userName || "?").charAt(0).toUpperCase();
         
         // 设置用户状态为在线
         await updateUserStatus(true);
