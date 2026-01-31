@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -9,6 +8,7 @@
     <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-database.js"></script>
+
     <style>
         /* ========== 新版UI样式 ========== */
         body {
@@ -28,13 +28,13 @@
             margin-bottom: 20px;
             border-bottom: 1px solid rgba(255,255,255,0.1);
         }
-        
+
         .top-bar h1 {
             font-size: 24px;
             margin: 0;
             color: #fff;
         }
-        
+
         .back-btn {
             background: #3498db;
             color: white;
@@ -45,7 +45,7 @@
             text-decoration: none;
             display: inline-block;
         }
-        
+
         .chat-layout {
             display: grid;
             grid-template-columns: 250px 1fr;
@@ -53,14 +53,14 @@
             max-width: 1400px;
             margin: 0 auto;
         }
-        
+
         .sidebar-card {
             background: #16213e;
             border-radius: 15px;
             padding: 20px;
             box-shadow: 0 5px 20px rgba(0,0,0,0.3);
         }
-        
+
         .chat-card {
             background: #16213e;
             border-radius: 15px;
@@ -69,19 +69,19 @@
             display: flex;
             flex-direction: column;
         }
-        
+
         .chat-card-header {
             padding: 20px;
             border-bottom: 1px solid rgba(255,255,255,0.1);
             background: rgba(0,0,0,0.2);
         }
-        
+
         .chat-card-header h2 {
             margin: 0;
             font-size: 20px;
             color: #fff;
         }
-        
+
         .online-badge {
             background: #2ecc71;
             color: white;
@@ -90,7 +90,7 @@
             font-size: 12px;
             margin-left: 10px;
         }
-        
+
         .messages-area {
             flex: 1;
             padding: 20px;
@@ -98,7 +98,7 @@
             min-height: 400px;
             max-height: 600px;
         }
-        
+
         .message-item {
             background: rgba(255,255,255,0.05);
             padding: 12px 15px;
@@ -106,35 +106,35 @@
             margin-bottom: 10px;
             border-left: 3px solid #3498db;
         }
-        
+
         .message-item.own {
             background: rgba(52, 152, 219, 0.2);
             border-left-color: #2ecc71;
         }
-        
+
         .message-user {
             font-weight: bold;
             color: #3498db;
             margin-bottom: 5px;
         }
-        
+
         .message-time {
             font-size: 12px;
             color: rgba(255,255,255,0.5);
             margin-left: 10px;
         }
-        
+
         .chat-input-area {
             padding: 20px;
             border-top: 1px solid rgba(255,255,255,0.1);
             background: rgba(0,0,0,0.2);
         }
-        
+
         .input-row {
             display: flex;
             gap: 10px;
         }
-        
+
         .chat-input {
             flex: 1;
             padding: 12px 15px;
@@ -145,12 +145,12 @@
             font-size: 16px;
             caret-color: white;
         }
-        
+
         .chat-input:focus {
             outline: none;
             border-color: #3498db;
         }
-        
+
         .chat-send-btn {
             background: #3498db;
             color: white;
@@ -161,91 +161,31 @@
             cursor: pointer;
             font-weight: 600;
         }
-        
+
         .chat-send-btn:hover {
             background: #2980b9;
         }
-        
-        .forum-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-        
-        .forum-item {
-            padding: 12px 15px;
-            margin-bottom: 8px;
-            background: rgba(255,255,255,0.05);
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        
-        .forum-item:hover {
-            background: rgba(255,255,255,0.1);
-        }
-        
-        .forum-item.active {
-            background: rgba(52, 152, 219, 0.3);
-            border-left: 3px solid #3498db;
-        }
-        
-        .user-list-item {
-            display: flex;
-            align-items: center;
-            padding: 10px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        
-        .user-avatar {
-            width: 36px;
-            height: 36px;
-            background: #3498db;
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            margin-right: 10px;
-        }
-        
-        .user-name {
-            flex: 1;
-        }
-        
-        .user-status {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #2ecc71;
-        }
-        
-        .user-status.offline {
-            background: #e74c3c;
-        }
-        
-        /* 响应式 */
+
         @media (max-width: 768px) {
             .chat-layout {
                 grid-template-columns: 1fr;
             }
-            
+
             .sidebar-card {
                 margin-bottom: 20px;
             }
         }
     </style>
 </head>
+
+
 <body>
-    <!-- 新版UI（需要保留） -->
     <div class="top-bar">
         <h1>校园网 · 暗夜聊天室</h1>
         <a href="main.html" class="back-btn">← 返回主页</a>
     </div>
-    
+
     <div class="chat-layout">
-        <!-- 左侧论坛列表 -->
         <div class="sidebar-card">
             <h3 style="margin-top: 0; margin-bottom: 15px;">论坛选择</h3>
             <ul class="forum-list">
@@ -253,10 +193,9 @@
                 <li class="forum-item" data-forum="study" onclick="switchForum('study')">📚 学习交流</li>
                 <li class="forum-item" data-forum="fun" onclick="switchForum('fun')">🎮 休闲娱乐</li>
             </ul>
-            
+
             <h3 style="margin-top: 30px; margin-bottom: 15px;">在线用户</h3>
-            <div id="usersList" class="users-list">
-                <!-- 用户列表动态加载 -->
+            <div id="usersList">
                 <div class="user-list-item">
                     <div class="user-avatar">U</div>
                     <div class="user-name">加载中...</div>
@@ -264,50 +203,34 @@
                 </div>
             </div>
         </div>
-        
-        <!-- 中间聊天区 -->
+
         <div class="chat-card">
             <div class="chat-card-header">
                 <h2 id="currentForumTitle">综合讨论区 <span class="online-badge" id="onlineCount">0人在线</span></h2>
             </div>
-            
+
             <div class="messages-area" id="messagesContainer">
-                <!-- 消息动态加载 -->
                 <div style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">
                     <p>💬 还没有消息，快来第一个发言吧！</p>
                 </div>
             </div>
-            
+
             <div class="chat-input-area">
                 <div class="input-row">
                     <input type="text" id="messageInput" class="chat-input" placeholder="输入消息..." maxlength="500">
-                    <!-- 修复1：删除onclick属性，防止重复发送 -->
                     <button id="sendButton" class="chat-send-btn">发送</button>
                 </div>
             </div>
         </div>
     </div>
-    
-    <!-- 用户信息栏 -->
-    <div style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
-        <div style="display: flex; align-items: center;">
-            <div class="user-avatar" id="userAvatar">U</div>
-            <div style="margin-left: 10px;">
-                <div style="font-weight: bold;" id="currentUserName">用户</div>
-                <div style="font-size: 12px; color: rgba(255,255,255,0.7);">状态: <span id="userStatus">在线</span></div>
-            </div>
-        </div>
-        <button onclick="logout()" style="background: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">退出登录</button>
-    </div>
+
 
     <script>
-// ========= UTF-8 安全的 Base64 解码（与 main.html 保持一致）=========
+/* ========== UTF-8 安全解码 ========== */
 function safeAtob(str) {
     try {
         return decodeURIComponent(
-            atob(str).split('').map(function (c) {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join('')
+            atob(str).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
         );
     } catch (e) {
         console.error('解码失败:', e);
@@ -315,18 +238,13 @@ function safeAtob(str) {
     }
 }
 
-// ========= 清理 Unicode 双向控制符 =========
+/* ========== 清理 Unicode BiDi 控制符 ========== */
 function cleanText(text) {
     if (typeof text !== 'string') return text;
     return text.replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, '');
 }
 
-// ========= 安全IP编码 =========
-function encodeIPForFirebase(ip) {
-    return ip.replace(/\./g, "_");
-}
-
-// ========== Firebase 配置 ==========
+/* ========== Firebase 初始化 ========== */
 const firebaseConfig = {
     apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
     authDomain: "laoda907-22511.firebaseapp.com",
@@ -337,414 +255,192 @@ const firebaseConfig = {
     appId: "1:176173610464:web:3ff86202f9b05f24b36785"
 };
 
-// 全局变量
 let database;
 let currentUser = null;
-let currentForum = 'general';
+let currentForum = "general";
 let messagesRef = null;
 
-// 论坛映射
-const forumNames = {
-    'general': '综合讨论区',
-    'study': '学习交流',
-    'fun': '休闲娱乐'
-};
+/* ========== 页面加载 ========== */
+document.addEventListener("DOMContentLoaded", async () => {
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    database = firebase.database();
 
-// ========== 工具函数 ==========
+    const sessionStr = localStorage.getItem("xiaoyuan_session");
+    if (!sessionStr) return (window.location.href = "index.html");
+
+    let session;
+    try {
+        session = JSON.parse(safeAtob(sessionStr));
+        if (!session || Date.now() > session.expiry) throw new Error();
+    } catch {
+        localStorage.removeItem("xiaoyuan_session");
+        return (window.location.href = "index.html");
+    }
+
+    currentUser = {
+        userId: session.userId,
+        userName: session.name || session.userName || "未知用户",
+    };
+
+    initChat();
+});
+
+/* ========== 初始化聊天室 ========== */
+async function initChat() {
+    document.getElementById("currentUserName").textContent = currentUser.userName;
+    document.getElementById("userAvatar").textContent = currentUser.userName.charAt(0).toUpperCase();
+
+    switchForum("general");
+    loadUsers();
+    setupEventListeners();
+}
+
+/* ========== 切换论坛 ========== */
+function switchForum(forumId) {
+    currentForum = forumId;
+
+    document.querySelectorAll(".forum-item").forEach(item => item.classList.remove("active"));
+    document.querySelector(`.forum-item[data-forum="${forumId}"]`).classList.add("active");
+
+    document.getElementById("currentForumTitle").innerHTML =
+        `${forumNames[forumId]} <span class="online-badge" id="onlineCount">0人在线</span>`;
+
+    if (messagesRef) messagesRef.off();
+
+    document.getElementById("messagesContainer").innerHTML =
+        '<div style="text-align: center; padding:40px; color:rgba(255,255,255,0.5);">加载中...</div>';
+
+    loadMessages();
+    loadUsers();
+}
+
+/* ========== 加载消息 ========== */
+function loadMessages() {
+    const container = document.getElementById("messagesContainer");
+
+    messagesRef = database.ref(`forums/${currentForum}/messages`);
+    messagesRef.limitToLast(50).on("child_added", snapshot => {
+        const message = snapshot.val();
+        addMessageToUI(message, snapshot.key);
+    });
+
+    messagesRef.on("child_removed", snapshot => {
+        const msg = document.getElementById(`msg_${snapshot.key}`);
+        if (msg) msg.remove();
+    });
+}
+
+/* ========== 关键修复 - 使用 white-space: pre-wrap ========== */
+function addMessageToUI(message, id) {
+    const container = document.getElementById("messagesContainer");
+    const isOwn = message.userId === currentUser.userId;
+
+    const text = cleanText(message.text || "");
+
+    const msg = document.createElement("div");
+    msg.className = `message-item ${isOwn ? "own" : ""}`;
+    msg.id = `msg_${id}`;
+
+    const time = new Date(message.timestamp).toLocaleTimeString("zh-CN", {
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+
+    msg.innerHTML = `
+        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+            <div class="message-user">${message.userName}</div>
+            <div class="message-time">${time}</div>
+        </div>
+        <div style="white-space: pre-wrap;">${escapeHtml(text)}</div>
+    `;
+
+    container.appendChild(msg);
+    container.scrollTop = container.scrollHeight;
+}
+
+/* ========== 发送消息 ========== */
 function escapeHtml(text) {
-    const div = document.createElement('div');
+    const div = document.createElement("div");
     div.textContent = text;
     return div.innerHTML;
 }
 
-// 页面加载
-document.addEventListener('DOMContentLoaded', async () => {
-
-    // 初始化 Firebase
-    if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-    }
-    database = firebase.database();
-
-    // 读取 session
-    const str = localStorage.getItem('xiaoyuan_session');
-    if (!str) {
-        window.location.href = 'index.html';
-        return;
-    }
-
-    let session;
-    try {
-        // 使用与 main.html 相同的安全解码方式
-        const decodedStr = safeAtob(str);
-        if (!decodedStr) {
-            throw new Error('解码失败');
-        }
-        
-        session = JSON.parse(decodedStr);
-        if (Date.now() > session.expiry) {
-            localStorage.removeItem('xiaoyuan_session');
-            window.location.href = 'index.html';
-            return;
-        }
-    } catch {
-        localStorage.removeItem('xiaoyuan_session');
-        window.location.href = 'index.html';
-        return;
-    }
-
-    // 设置当前用户
-    currentUser = {
-        userId: session.userId,
-        userName: session.name || session.userName || "未知用户",
-        expiry: session.expiry
-    };
-
-    // 初始化聊天室
-    initChat();
-});
-
-// 初始化聊天
-async function initChat() {
-    try {
-        console.log('Firebase 初始化成功');
-        
-        // 显示用户信息
-        document.getElementById('currentUserName').textContent = currentUser.userName;
-        document.getElementById('userAvatar').textContent = (currentUser.userName || "?").charAt(0).toUpperCase();
-        
-        // 设置用户状态为在线
-        await updateUserStatus(true);
-        
-        // 设置论坛
-        switchForum('general');
-        
-        // 加载在线用户
-        loadUsers();
-        
-        // 设置事件监听
-        setupEventListeners();
-        
-        // 确保输入框可以输入
-        const input = document.getElementById('messageInput');
-        input.disabled = false;
-        
-        // 【规则1 — 输入框实时清除 Unicode 控制符】
-        document.getElementById("messageInput").addEventListener("input", function() {
-            const start = this.selectionStart;
-            const end = this.selectionEnd;
-            this.value = cleanText(this.value);
-            this.setSelectionRange(start, end);
-        });
-        
-        // 延迟聚焦，确保布局稳定
-        setTimeout(() => {
-            input.focus();
-        }, 300);
-        
-    } catch (error) {
-        console.error('初始化失败:', error);
-        alert('系统初始化失败，请刷新页面: ' + error.message);
-    }
-}
-
-// 更新用户状态
-async function updateUserStatus(online) {
-    try {
-        if (!currentUser) return;
-        
-        const statusRef = database.ref('status/' + currentUser.userId);
-        const userData = {
-            userId: currentUser.userId,
-            userName: currentUser.userName,
-            online: online,
-            forum: currentForum,
-            lastSeen: new Date().toISOString()
-        };
-        
-        if (online) {
-            await statusRef.set(userData);
-        } else {
-            await statusRef.update({ 
-                online: false,
-                lastSeen: new Date().toISOString() 
-            });
-        }
-        
-        document.getElementById('userStatus').textContent = online ? '在线' : '离线';
-        console.log('更新用户状态:', online ? '在线' : '离线');
-    } catch (error) {
-        console.error('更新状态失败:', error);
-    }
-}
-
-// 切换论坛
-function switchForum(forumId) {
-    console.log('切换论坛到:', forumId);
-    
-    currentForum = forumId;
-    
-    // 更新UI
-    document.querySelectorAll('.forum-item').forEach(item => {
-        item.classList.remove('active');
-    });
-    document.querySelector(`.forum-item[data-forum="${forumId}"]`).classList.add('active');
-    document.getElementById('currentForumTitle').innerHTML = `${forumNames[forumId]} <span class="online-badge" id="onlineCount">0人在线</span>`;
-    
-    // 清空消息容器
-    const messagesContainer = document.getElementById('messagesContainer');
-    messagesContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);"><p>💬 加载消息中...</p></div>';
-    
-    if (messagesRef) {
-        messagesRef.off();
-    }
-    
-    loadMessages();
-    
-    if (currentUser) {
-        updateUserStatus(true);
-    }
-    
-    loadUsers();
-}
-
-// 加载消息
-function loadMessages() {
-    const container = document.getElementById('messagesContainer');
-    
-    messagesRef = database.ref('forums/' + currentForum + '/messages');
-    
-    // 只保留 on('child_added') 监听
-    messagesRef.limitToLast(50).on('child_added', snapshot => {
-        const message = snapshot.val();
-        
-        // 移除空状态提示
-        const emptyState = container.querySelector('div[style*="text-align: center"]');
-        if (emptyState) {
-            emptyState.remove();
-        }
-        
-        addMessageToUI(message, snapshot.key);
-    });
-    
-    messagesRef.on('child_removed', snapshot => {
-        removeMessageFromUI(snapshot.key);
-    });
-}
-
-// 添加消息到UI - 直接使用原始文本，不做任何处理
-function addMessageToUI(message, messageId) {
-    const container = document.getElementById('messagesContainer');
-    
-    const isOwn = message.userId === currentUser.userId;
-    
-    const messageEl = document.createElement('div');
-    messageEl.className = `message-item ${isOwn ? 'own' : ''}`;
-    messageEl.id = `msg_${messageId}`;
-    
-    const time = message.timestamp ? new Date(message.timestamp).toLocaleTimeString('zh-CN', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-    }) : '刚刚';
-    
-    // 【规则3 — 在渲染消息到 UI 时也要清理一次】
-    let messageText = message.text || '';
-    messageText = cleanText(messageText);
-    
-    // 🔧 修复2：固定渲染方向，防止浏览器自动调换文字顺序
-    messageEl.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-            <div class="message-user">${escapeHtml(message.userName || '匿名用户')}</div>
-            <div class="message-time">${time}</div>
-        </div>
-        <div style="unicode-bidi: plaintext; direction: ltr;">
-            ${escapeHtml(messageText)}
-        </div>
-    `;
-    
-    container.appendChild(messageEl);
-    container.scrollTop = container.scrollHeight;
-}
-
-// 删除消息从UI
-function removeMessageFromUI(messageId) {
-    const messageEl = document.getElementById(`msg_${messageId}`);
-    if (messageEl) {
-        messageEl.remove();
-    }
-}
-
-// 发送消息 - 直接存储原始文本
 async function sendMessage() {
-    console.log('sendMessage 被调用');
-    
-    const input = document.getElementById('messageInput');
-    const sendButton = document.getElementById('sendButton');
-    let text = input.value.trim();
-    
-    // 【规则2 — 在发送消息前再清理一次】
-    text = cleanText(text);
-    
-    if (!text) {
-        alert('请输入消息内容');
-        input.focus();
-        return;
-    }
-    
-    // 检查用户状态
-    if (!currentUser || !currentUser.userId) {
-        alert('会话已过期，请重新登录');
-        window.location.href = 'index.html';
-        return;
-    }
-    
-    // 禁用按钮防止重复发送
-    sendButton.disabled = true;
-    sendButton.textContent = '发送中...';
-    
-    console.log('准备发送消息:', {
-        用户: currentUser.userName,
-        论坛: currentForum,
-        内容: text
-    });
-    
+    const input = document.getElementById("messageInput");
+    const sendBtn = document.getElementById("sendButton");
+    let text = cleanText(input.value.trim());
+
+    if (!text) return alert("请输入消息内容");
+
+    sendBtn.disabled = true;
+    sendBtn.textContent = "发送中...";
+
     try {
-        // 确保数据库已初始化
-        if (!database) {
-            console.log('数据库未初始化，重新初始化...');
-            database = firebase.database();
-        }
-        
-        // 直接存储原始文本，不进行任何编码
-        const messageData = {
+        const msgData = {
             userId: currentUser.userId,
             userName: currentUser.userName,
-            text: text, // 直接存储原始文本（已清理控制符）
+            text,
             timestamp: new Date().toISOString(),
-            forum: currentForum
+            forum: currentForum,
         };
-        
-        // 发送到Firebase
-        const messageRef = database.ref(`forums/${currentForum}/messages`).push();
-        await messageRef.set(messageData);
-        
-        console.log('✅ 消息发送成功，ID:', messageRef.key);
-        
-        // 清空输入框并重新聚焦
-        input.value = '';
-        sendButton.disabled = false;
-        sendButton.textContent = '发送';
-        
-        setTimeout(() => {
-            input.focus();
-        }, 50);
-        
-        // 更新用户状态
-        await updateUserStatus(true);
-        
-    } catch (error) {
-        console.error('❌ 发送消息失败:', error);
-        alert('发送失败: ' + error.message);
-        sendButton.disabled = false;
-        sendButton.textContent = '发送';
+
+        const ref = database.ref(`forums/${currentForum}/messages`).push();
+        await ref.set(msgData);
+
+        input.value = "";
+        sendBtn.disabled = false;
+        sendBtn.textContent = "发送";
+        input.focus();
+
+    } catch (err) {
+        alert("发送失败：" + err.message);
+        sendBtn.disabled = false;
+        sendBtn.textContent = "发送";
     }
 }
 
-// 加载在线用户
-function loadUsers() {
-    const usersList = document.getElementById('usersList');
-    const onlineCountEl = document.getElementById('onlineCount');
-    
-    const usersRef = database.ref('status');
-    
-    usersRef.on('value', snapshot => {
-        const users = [];
-        snapshot.forEach(childSnapshot => {
-            const user = childSnapshot.val();
-            if (user.online && user.forum === currentForum) {
-                users.push(user);
-            }
-        });
-        
-        // 更新在线人数
-        if (onlineCountEl) {
-            onlineCountEl.textContent = `${users.length}人在线`;
-        }
-        
-        // 更新用户列表
-        if (users.length === 0) {
-            usersList.innerHTML = '<div style="color: rgba(255,255,255,0.5); text-align: center; padding: 10px;">暂无在线用户</div>';
-        } else {
-            let html = '';
-            users.forEach(user => {
-                html += `
-                    <div class="user-list-item">
-                        <div class="user-avatar">${user.userName ? user.userName.charAt(0).toUpperCase() : '?'}</div>
-                        <div class="user-name">${escapeHtml(user.userName || '未知用户')}</div>
-                        <div class="user-status"></div>
-                    </div>
-                `;
-            });
-            usersList.innerHTML = html;
-        }
-    });
-}
-
-// 设置事件监听 - 修复：只绑定一次事件
+/* ========== 事件监听 ========== */
 function setupEventListeners() {
-    console.log('设置事件监听器...');
-    
-    const input = document.getElementById('messageInput');
-    const sendButton = document.getElementById('sendButton');
-    
-    if (!input) {
-        console.error('❌ 输入框元素未找到！');
-        return;
-    }
-    
-    if (!sendButton) {
-        console.error('❌ 发送按钮未找到！');
-        return;
-    }
-    
-    console.log('找到输入框和发送按钮');
-    
-    // 发送按钮点击事件
-    sendButton.addEventListener('click', function(e) {
-        console.log('发送按钮被点击');
-        e.preventDefault(); // 防止重复触发
-        sendMessage();
-    });
-    
-    // 输入框回车发送
-    input.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
+    const input = document.getElementById("messageInput");
+    const btn = document.getElementById("sendButton");
+
+    btn.addEventListener("click", sendMessage);
+    input.addEventListener("keydown", e => {
+        if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             sendMessage();
         }
     });
-    
-    // 页面关闭时更新状态
-    window.addEventListener('beforeunload', function() {
-        updateUserStatus(false);
-    });
-    
-    // 页面可见性变化
-    document.addEventListener('visibilitychange', function() {
-        updateUserStatus(!document.hidden);
-    });
 }
 
-// 退出登录
-function logout() {
-    if (confirm('确定要退出登录吗？')) {
-        updateUserStatus(false).then(() => {
-            localStorage.removeItem('xiaoyuan_session');
-            window.location.href = 'index.html';
+/* ========== 在线用户（原样保留） ========== */
+function loadUsers() {
+    const list = document.getElementById("usersList");
+    const onlineRef = database.ref("status");
+
+    onlineRef.on("value", s => {
+        const users = [];
+        s.forEach(c => {
+            const u = c.val();
+            if (u.online && u.forum === currentForum) users.push(u);
         });
-    }
+
+        document.getElementById("onlineCount").textContent = users.length + "人在线";
+
+        if (!users.length) {
+            list.innerHTML = `<div style="color:rgba(255,255,255,0.5); text-align:center;">暂无在线用户</div>`;
+            return;
+        }
+
+        list.innerHTML = users.map(u => `
+            <div class="user-list-item">
+                <div class="user-avatar">${u.userName.charAt(0).toUpperCase()}</div>
+                <div class="user-name">${escapeHtml(u.userName)}</div>
+                <div class="user-status"></div>
+            </div>
+        `).join("");
+    });
 }
     </script>
 </body>
 </html>
-```
