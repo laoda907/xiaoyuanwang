@@ -307,7 +307,7 @@ function encodeIPForFirebase(ip) {
 // ========== Firebase 配置 ==========
 const firebaseConfig = {
     apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
-    authDomain: "laoda907-22511.firebaseapp.com",
+    authDomain: "laoda907-22511.firebasestorage.app",
     databaseURL: "https://laoda907-22511-default-rtdb.asia-southeast1.firebasedatabase.app",
     projectId: "laoda907-22511",
     storageBucket: "laoda907-22511.firebasestorage.app",
@@ -336,61 +336,49 @@ function escapeHtml(text) {
 }
 
 // 页面加载
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('聊天页面加载');
-    
-    // 步骤1: 初始化 Firebase
+document.addEventListener('DOMContentLoaded', async () => {
+
+    // 初始化 Firebase
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
     }
-    
-    // 步骤2: 读取 localStorage session
-    const sessionStr = localStorage.getItem('xiaoyuan_session');
-    if (!sessionStr) {
-        // 步骤3: 没有 session → 跳到 index.html
-        console.log('没有找到 session，跳转到登录页');
-        window.location.href = "index.html";
+    database = firebase.database();
+
+    // 读取 session
+    const str = localStorage.getItem('xiaoyuan_session');
+    if (!str) {
+        window.location.href = 'index.html';
         return;
     }
-    
-    let sessionData;
+
+    let session;
     try {
-        // 步骤4: 用 JSON.parse 解析 session（不使用 Base64）
-        sessionData = JSON.parse(sessionStr);
-    } catch (error) {
-        // 步骤5: 解析失败 → 删除 session → 跳到 index.html
-        console.error('解析 session 失败:', error);
+        session = JSON.parse(str);
+        if (Date.now() > session.expiry) {
+            localStorage.removeItem('xiaoyuan_session');
+            window.location.href = 'index.html';
+            return;
+        }
+    } catch {
         localStorage.removeItem('xiaoyuan_session');
-        window.location.href = "index.html";
+        window.location.href = 'index.html';
         return;
     }
-    
-    // 检查是否过期
-    if (sessionData.expiry && Date.now() > sessionData.expiry) {
-        // 步骤5: 过期 → 删除 session → 跳到 index.html
-        console.log('session 已过期');
-        localStorage.removeItem('xiaoyuan_session');
-        window.location.href = "index.html";
-        return;
-    }
-    
-    // 步骤6: 从 session 生成 currentUser
+
+    // 设置当前用户
     currentUser = {
-        userId: sessionData.userId,
-        userName: sessionData.userName || '用户',
-        expiry: sessionData.expiry
+        userId: session.userId,
+        userName: session.userName,
+        expiry: session.expiry
     };
-    
-    console.log('从 session 恢复用户信息:', currentUser.userName);
-    
-    // 步骤7: 最后执行 initChat()
+
+    // 初始化聊天室
     initChat();
 });
 
 // 初始化聊天
 async function initChat() {
     try {
-        database = firebase.database();
         console.log('Firebase 初始化成功');
         
         // 显示用户信息
@@ -720,7 +708,6 @@ function setupEventListeners() {
 function logout() {
     if (confirm('确定要退出登录吗？')) {
         updateUserStatus(false).then(() => {
-            // 只清除 localStorage session，不再进行 Firebase signOut
             localStorage.removeItem('xiaoyuan_session');
             window.location.href = 'index.html';
         });
