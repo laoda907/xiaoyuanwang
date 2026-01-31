@@ -398,7 +398,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 设置当前用户
     currentUser = {
         userId: session.userId,
-        userName: session.name,
+        userName: session.name || session.userName,
         expiry: session.expiry
     };
 
