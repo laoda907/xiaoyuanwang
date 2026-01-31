@@ -28,7 +28,7 @@
       font-weight: bold;
     }
 
-    /* 多广场按钮 */
+    /* 多广场按钮栏 */
     #forumBar {
       padding: 12px 20px;
       background: rgba(255,255,255,0.05);
@@ -57,6 +57,9 @@
       background: rgba(255,255,255,0.03);
       border-bottom: 1px solid rgba(255,255,255,0.1);
       font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     #bgmSelect {
@@ -136,124 +139,160 @@
 
   <!-- 背景音乐 -->
   <div id="bgmBar">
-    背景音乐选择 →  
+    <span>背景音乐：</span>
     <select id="bgmSelect">
-      <option value="none">关闭音乐</option>
-      <option value="https://music.163.com/song/media/outer/url?id=28907016.mp3">穿越时空的思念（原声）</option>
-      <option value="https://music.163.com/song/media/outer/url?id=22707000.mp3">穿越时空的思念（钢琴）</option>
-      <option value="https://music.163.com/song/media/outer/url?id=1387202414.mp3">穿越时空的思念（治愈版）</option>
+      <option value="none">关闭</option>
+
+      <!-- 👇👇👇 牢大在这里替换成你自己的 mp3 链接 👇👇👇 -->
+      <option value="你的原版链接1.mp3">穿越时空的思念（原版）</option>
+      <option value="你的钢琴版链接2.mp3">穿越时空的思念（钢琴）</option>
+      <option value="你的治愈版链接3.mp3">穿越时空的思念（治愈版）</option>
+      <!-- 以上 URL 你可以换成你自己服务器的 / 外链 mp3 -->
     </select>
   </div>
 
   <!-- 播放器 -->
   <audio id="bgmPlayer" loop></audio>
 
+  <!-- 聊天内容 -->
   <div id="chatArea"></div>
 
+  <!-- 输入区 -->
   <div id="inputBar">
     <textarea id="msgInput" rows="1" placeholder="输入消息..."></textarea>
     <button id="sendBtn">发送</button>
   </div>
 
   <!-- ==================== JavaScript ==================== -->
-<script>
-/* ---------------- Firebase 初始化 ---------------- */
-const firebaseConfig = {
-  apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
-  authDomain: "laoda907-22511.firebaseapp.com",
-  databaseURL: "https://laoda907-22511-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "laoda907-22511",
-  storageBucket: "laoda907-22511.appspot.com",
-  messagingSenderId: "176173610464",
-  appId: "1:176173610464:web:3ff86202f9b05f24b36785"
-};
+  <script>
+    /* ---------------- Firebase 初始化 ---------------- */
+    const firebaseConfig = {
+      apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
+      authDomain: "laoda907-22511.firebaseapp.com",
+      databaseURL: "https://laoda907-22511-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "laoda907-22511",
+      storageBucket: "laoda907-22511.appspot.com",
+      messagingSenderId: "176173610464",
+      appId: "1:176173610464:web:3ff86202f9b05f24b36785"
+    };
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-/* ---------------- 全局变量 ---------------- */
-let forum = "general"; // 当前广场
-const chatArea = document.getElementById("chatArea");
-const input = document.getElementById("msgInput");
-const btn = document.getElementById("sendBtn");
+    /* ---------------- 全局变量 ---------------- */
+    let forum = "general"; // 当前广场：general / study / fun
+    const chatArea = document.getElementById("chatArea");
+    const input = document.getElementById("msgInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const forumButtons = document.querySelectorAll(".forumBtn");
 
-const currentUserId = "user_" + Math.random().toString(36).slice(2, 9);
+    const currentUserId = "user_" + Math.random().toString(36).slice(2, 10);
 
-/* ---------------- 背景音乐 ---------------- */
-const bgmPlayer = document.getElementById("bgmPlayer");
-const bgmSelect = document.getElementById("bgmSelect");
+    // 当前的 Firebase 消息监听引用（用于 off 防重）
+    let currentMessagesRef = null;
 
-bgmSelect.onchange = () => {
-  const url = bgmSelect.value;
-  if (url === "none") {
-    bgmPlayer.pause();
-  } else {
-    bgmPlayer.src = url;
-    bgmPlayer.volume = 0.5;
-    bgmPlayer.play();
-  }
-};
+    /* ---------------- 文本清理（防止控制字符等） ---------------- */
+    function cleanText(text) {
+      if (typeof text !== "string") return "";
+      // 去掉奇怪的双向控制符，防止再次出现乱序
+      return text.replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, "");
+    }
 
-/* ---------------- 显示消息 ---------------- */
-function addMsg(text, self = false) {
-  const div = document.createElement("div");
-  div.className = "msg" + (self ? " me" : "");
-  div.textContent = text;
-  chatArea.appendChild(div);
-  chatArea.scrollTop = chatArea.scrollHeight;
-}
+    /* ---------------- 显示消息 ---------------- */
+    function addMsg(text, isOwn) {
+      const div = document.createElement("div");
+      div.className = "msg" + (isOwn ? " me" : "");
+      div.textContent = text;
+      chatArea.appendChild(div);
+      chatArea.scrollTop = chatArea.scrollHeight;
+    }
 
-/* ---------------- 加载消息 ---------------- */
-function loadMessages() {
-  chatArea.innerHTML = "";
+    /* ---------------- 加载并监听消息（核心） ---------------- */
+    function attachMessagesListener() {
+      // 清空当前 UI
+      chatArea.innerHTML = "";
 
-  db.ref(`forums/${forum}/messages`)
-    .limitToLast(200)
-    .on("child_added", snap => {
-      const msg = snap.val();
-      addMsg(msg.text, msg.userId === currentUserId);
+      // ❗先解除之前的监听，防止叠加
+      if (currentMessagesRef) {
+        currentMessagesRef.off();
+      }
+
+      // 新的消息路径
+      const ref = db.ref("forums/" + forum + "/messages");
+      currentMessagesRef = ref;
+
+      // 只监听最近 200 条
+      ref.limitToLast(200).on("child_added", function (snapshot) {
+        const msg = snapshot.val() || {};
+        const text = cleanText(msg.text || "");
+        const isOwn = msg.userId === currentUserId;
+        addMsg(text, isOwn);
+      });
+    }
+
+    /* ---------------- 发送消息 ---------------- */
+    function sendMessage() {
+      let raw = input.value;
+      let text = cleanText(raw.trim());
+      if (!text) return;
+
+      // ➜ 只写入数据库，不再手动 addMsg，避免重复
+      const ref = db.ref("forums/" + forum + "/messages");
+      ref.push({
+        userId: currentUserId,
+        text: text,
+        timestamp: Date.now()
+      });
+
+      input.value = "";
+      input.focus();
+    }
+
+    /* ---------------- 事件绑定：发送 ---------------- */
+    sendBtn.addEventListener("click", function () {
+      sendMessage();
     });
-}
 
-/* ---------------- 发送消息 ---------------- */
-function sendMessage() {
-  let text = input.value.trim();
-  if (!text) return;
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
 
-  db.ref(`forums/${forum}/messages`).push({
-    userId: currentUserId,
-    text,
-    timestamp: Date.now()
-  });
+    /* ---------------- 事件绑定：广场切换 ---------------- */
+    forumButtons.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        forumButtons.forEach(function (b) {
+          b.classList.remove("active");
+        });
+        btn.classList.add("active");
 
-  input.value = "";
-  addMsg(text, true);
-}
+        forum = btn.getAttribute("data-f");
+        attachMessagesListener();
+      });
+    });
 
-/* ---------------- 事件绑定 ---------------- */
-btn.onclick = sendMessage;
+    /* ---------------- 背景音乐控制 ---------------- */
+    const bgmPlayer = document.getElementById("bgmPlayer");
+    const bgmSelect = document.getElementById("bgmSelect");
 
-input.onkeydown = (e) => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
-  }
-};
+    bgmSelect.addEventListener("change", function () {
+      const url = bgmSelect.value;
+      if (!url || url === "none") {
+        bgmPlayer.pause();
+        bgmPlayer.removeAttribute("src");
+      } else {
+        bgmPlayer.src = url;
+        bgmPlayer.volume = 0.5;
+        bgmPlayer.play().catch(function (e) {
+          console.log("背景音乐播放失败（可能是浏览器限制自动播放）:", e);
+        });
+      }
+    });
 
-/* ---------------- 广场切换 ---------------- */
-document.querySelectorAll(".forumBtn").forEach(btn => {
-  btn.onclick = () => {
-    document.querySelectorAll(".forumBtn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    forum = btn.dataset.f;
-    loadMessages();
-  };
-});
-
-/* ---------------- 初始化加载 ---------------- */
-loadMessages();
-
-</script>
-
+    /* ---------------- 初始化 ---------------- */
+    attachMessagesListener();
+  </script>
 </body>
 </html>
