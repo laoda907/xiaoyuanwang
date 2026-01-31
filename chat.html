@@ -14,7 +14,7 @@
 body {
   margin: 0;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(to bottom, #0b1d4a 0%, #000000 100%);
+  background: #1a1a2e;
   color: #fff;
   height: 100vh;
   display: flex;
@@ -181,42 +181,35 @@ header {
   0%,100%{opacity:0.9;}
   50%{opacity:0.6;}
 }
-
-/* ======== 星空发光层 ======== */
-.stars {
-  width: 2px;
-  height: 2px;
-  background: white;
-  position: absolute;
-  top: 0;
-  border-radius: 50%;
-  animation: twinkle 2s infinite ease-in-out;
-  opacity: 0.8;
-}
-@keyframes twinkle {
-  0% { opacity: 0.2; box-shadow: 0 0 2px white; }
-  50% { opacity: 1; box-shadow: 0 0 6px white; }
-  100% { opacity: 0.2; box-shadow: 0 0 2px white; }
-}
-
 </style>
+
+<style>
+.long-msg {
+  max-height: 80px;
+  overflow: hidden;
+  position: relative;
+}
+.long-msg::after {
+  content: "点击展开";
+  position: absolute;
+  bottom:0;
+  right:0;
+  background: rgba(255,255,255,0.7);
+  font-size:12px;
+  padding:2px 4px;
+  cursor:pointer;
+}
+.expanded {
+  max-height: none !important;
+}
+.expanded::after {
+  content: "点击收起";
+}
+</style>
+
 </head>
 
 <body>
-
-<!-- 星空生成 -->
-<script>
-for (let i = 0; i < 60; i++) {
-    const s = document.createElement("div");
-    s.className = "stars";
-    s.style.left = Math.random() * window.innerWidth + "px";
-    s.style.top = Math.random() * 120 + "px";
-    s.style.transform = "scale(" + (Math.random() * 1.5 + 0.5) + ")";
-    s.style.animationDelay = Math.random() * 2 + "s";
-    document.body.appendChild(s);
-}
-</script>
-
 
 <header>🔥 全新升级聊天室</header>
 
@@ -255,7 +248,8 @@ for (let i = 0; i < 60; i++) {
 <div id="chatArea"></div>
 
 <div id="inputBar">
-  <textarea id="msgInput" rows="1" placeholder="输入消息..."></textarea>
+  <div id="counter" style="text-align:right;font-size:12px;color:#999;">0 / 300</div>
+<textarea id="msgInput" rows="1" placeholder="输入消息..."></textarea>
   <button id="sendBtn">发送</button>
 </div>
 
@@ -382,32 +376,9 @@ function loadForum(){
 }
 
 /* ========== 发送 ========== */
-
-/* ========= 本地 AI 审核（重度） ========= */
-function localAIModerate(text){
-    let t = text.toLowerCase();
-
-    const badWords = [
-      "操你","艹你","草你","nmsl","你妈死","死妈","弱智","智障","去死","滚",
-      "强奸","迷奸","性侵","强暴","约炮","性交","口交","h片","裸照","黄片",
-      "卖淫","嫖娼","赌博","诈骗","洗钱","毒品","冰毒","k粉","枪支","爆炸","恐怖袭击",
-      "习近平","政府","当局","政治","反动","叛国","示威","抗议","国家机密"
-    ];
-    for(let w of badWords){
-        if(t.includes(w)) return false;
-    }
-    return true;
-}
-
 sendBtn.onclick = sendMessage;
 function sendMessage(){
-  
-let t = cleanText(input.value.trim());
-if(!localAIModerate(t)){
-    alert("❌ 内容涉嫌违规（AI重度审核拦截）");
-    return;
-}
-
+  let t = cleanText(input.value.trim());
   if(!t) return;
 
   t = smartFilter(t);
@@ -440,7 +411,7 @@ const bgmPlayer = document.getElementById("bgmPlayer");
 document.getElementById("bgmSelect").onchange = ()=>{
   let v = bgmSelect.value;
   if(v==="none") bgmPlayer.pause();
-  else{ bgmPlayer.src=v; bgmPlayer.play(); bgmPlayer.loop=true; }
+  else{ bgmPlayer.src=v; bgmPlayer.play(); }
 };
 
 /* ========== DOM 雪花（不卡） ========== */
@@ -505,6 +476,51 @@ function updatePresence(){
 }
 
 updatePresence();
+</script>
+
+
+<script>
+// ===== 输入限制最多300字 =====
+document.addEventListener("DOMContentLoaded", ()=>{
+ const input=document.getElementById("msgInput");
+ if(input){
+   input.addEventListener("input",()=>{
+     if(input.value.length>300){
+       input.value=input.value.substring(0,300);
+     }
+   });
+ }
+});
+</script>
+
+
+<script>
+// ===== 字数实时显示 =====
+document.addEventListener("DOMContentLoaded", ()=>{
+ const input=document.getElementById("msgInput");
+ const counter=document.getElementById("counter");
+ if(input && counter){
+   input.addEventListener("input",()=>{
+     counter.textContent = input.value.length + " / 300";
+   });
+ }
+});
+</script>
+
+
+<script>
+// 自动折叠长消息
+document.addEventListener("DOMContentLoaded", ()=>{
+  const observer=new MutationObserver(()=>{
+    document.querySelectorAll(".msgBubble").forEach(m=>{
+      if(m.textContent.length>120 && !m.classList.contains("long-msg") && !m.classList.contains("expanded")){
+        m.classList.add("long-msg");
+        m.onclick=()=>{ m.classList.toggle("expanded"); };
+      }
+    });
+  });
+  observer.observe(document.body,{childList:true,subtree:true});
+});
 </script>
 
 </body>
