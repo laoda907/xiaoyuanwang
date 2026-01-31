@@ -384,7 +384,20 @@
             background: #d1ecf1;
             color: #0c5460;
         }
-    </style>
+    
+/* 移动端横向滑动 + 字体更小 */
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+.data-table th, 
+.data-table td {
+    white-space: nowrap;
+    font-size: 14px;
+    max-width: none;
+}
+
+</style>
 </head>
 <body>
     <!-- 顶部导航 -->
@@ -489,7 +502,8 @@
                 
                 <div id="usersLoading" class="loading">加载用户数据中...</div>
                 
-                <table class="data-table" id="usersTable" style="display: none;">
+                <div class="table-wrapper">
+<table class="data-table" id="usersTable" style="display: none;">
                     <thead>
                         <tr>
                             <th>用户ID</th>
@@ -504,6 +518,7 @@
                         <!-- 用户数据动态加载 -->
                     </tbody>
                 </table>
+</div>
                 
                 <div id="noUsers" class="empty-state" style="display: none;">
                     <div>👤</div>
