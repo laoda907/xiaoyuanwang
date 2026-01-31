@@ -28,7 +28,7 @@
       font-weight: bold;
     }
 
-    /* 多广场按钮栏 */
+    /* 广场按钮栏 */
     #forumBar {
       padding: 12px 20px;
       background: rgba(255,255,255,0.05);
@@ -51,7 +51,7 @@
       background: #3498db !important;
     }
 
-    /* 背景音乐栏 */
+    /* 音乐栏 & 下雪按钮 */
     #bgmBar {
       padding: 12px 20px;
       background: rgba(255,255,255,0.03);
@@ -70,29 +70,80 @@
       border: none;
     }
 
-    /* 聊天区 */
+    /* 聊天区域 */
     #chatArea {
       flex: 1;
       overflow-y: auto;
       padding: 20px;
     }
 
-    .msg {
-      background: rgba(255,255,255,0.08);
+    /* 消息总布局 */
+    .msgWrapper {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 14px;
+    }
+
+    .msgWrapper.me {
+      justify-content: flex-end;
+    }
+
+    /* 🌈 头像及渐变光圈 */
+    .avatarWrapper {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      padding: 3px;
+      background: conic-gradient(from 0deg, #8bd3ff, #b28bff, #ff8bd4, #8bd3ff);
+      animation: rotateGlow 4s linear infinite;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+
+    @keyframes rotateGlow {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .avatar {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: #3498db;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      user-select: none;
+    }
+
+    .msgWrapper.me .avatarWrapper {
+      margin-left: 10px;
+      margin-right: 0;
+    }
+
+    .msgBubble {
+      max-width: 70%;
       padding: 10px 14px;
       border-radius: 10px;
-      margin-bottom: 10px;
-      max-width: 75%;
+      background: rgba(255,255,255,0.08);
       white-space: pre-wrap;
       word-break: break-word;
     }
 
-    .me {
+    .msgWrapper.me .msgBubble {
       background: rgba(52,152,219,0.3);
-      margin-left: auto;
     }
 
-    /* 输入区 */
+    .msgName {
+      font-size: 12px;
+      opacity: 0.7;
+      margin-bottom: 3px;
+    }
+
+    /* 输入栏 */
     #inputBar {
       display: flex;
       padding: 15px;
@@ -109,8 +160,8 @@
       color: #fff;
       font-size: 16px;
       resize: none;
-      white-space: pre-wrap;
       outline: none;
+      white-space: pre-wrap;
     }
 
     #sendBtn {
@@ -119,10 +170,29 @@
       background: #3498db;
       border: none;
       border-radius: 8px;
-      font-size: 16px;
       cursor: pointer;
+      font-size: 16px;
       color: #fff;
     }
+
+    /* ❄ 雪花 */
+    .snowflake {
+      position: fixed;
+      top: -10px;
+      color: white;
+      font-size: 10px;
+      opacity: 0.8;
+      pointer-events: none;
+      z-index: 9999;
+      filter: drop-shadow(0 0 4px white);
+      animation: fall linear forwards;
+    }
+
+    @keyframes fall {
+      0% { transform: translateY(0) rotate(0deg); }
+      100% { transform: translateY(110vh) rotate(360deg); }
+    }
+
   </style>
 </head>
 
@@ -130,169 +200,279 @@
 
   <header>🔥 全新升级聊天室</header>
 
-  <!-- 三大广场 -->
+  <!-- 广场栏 -->
   <div id="forumBar">
     <button class="forumBtn active" data-f="general">综合广场</button>
     <button class="forumBtn" data-f="study">学习广场</button>
     <button class="forumBtn" data-f="fun">娱乐广场</button>
   </div>
 
-  <!-- 背景音乐 -->
+  <!-- 背景音乐 + 下雪 -->
   <div id="bgmBar">
     <span>背景音乐：</span>
     <select id="bgmSelect">
       <option value="none">关闭</option>
-
-      <!-- 👇👇👇 牢大在这里替换成你自己的 mp3 链接 👇👇👇 -->
       <option value="https://raw.githubusercontent.com/laoda907/xiaoyuanwang/main/music/20110423105222-NTk0NTM5.mp3">穿越时空的思念（原版）</option>
       <option value="https://raw.githubusercontent.com/laoda907/xiaoyuanwang/main/music/20160709113245-MjU1ODA3.mp3">穿越时空的思念（钢琴）</option>
-      <option value="你的治愈版链接3.mp3">更多音乐敬请期待</option>
-      <!-- 以上 URL 你可以换成你自己服务器的 / 外链 mp3 -->
     </select>
+
+    <!-- 下雪按钮 -->
+    <button id="snowToggle" style="
+        padding: 6px 12px;
+        margin-left: 10px;
+        border-radius: 6px;
+        border: none;
+        background: #3498db;
+        color: white;
+        cursor: pointer;
+    "> ❄ 下雪 </button>
   </div>
 
-  <!-- 播放器 -->
   <audio id="bgmPlayer" loop></audio>
 
   <!-- 聊天内容 -->
   <div id="chatArea"></div>
 
-  <!-- 输入区 -->
+  <!-- 输入栏 -->
   <div id="inputBar">
     <textarea id="msgInput" rows="1" placeholder="输入消息..."></textarea>
     <button id="sendBtn">发送</button>
   </div>
 
-  <!-- ==================== JavaScript ==================== -->
-  <script>
-    /* ---------------- Firebase 初始化 ---------------- */
-    const firebaseConfig = {
-      apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
-      authDomain: "laoda907-22511.firebaseapp.com",
-      databaseURL: "https://laoda907-22511-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "laoda907-22511",
-      storageBucket: "laoda907-22511.appspot.com",
-      messagingSenderId: "176173610464",
-      appId: "1:176173610464:web:3ff86202f9b05f24b36785"
-    };
+<script>
+/* ======= 读取用户登录信息 ======= */
+function getUserSession() {
+  const str = localStorage.getItem("xiaoyuan_session");
+  if (!str) return null;
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+  try {
+    const decoded = atob(str).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('');
+    return JSON.parse(decodeURIComponent(decoded));
+  } catch (e) {
+    return null;
+  }
+}
 
-    /* ---------------- 全局变量 ---------------- */
-    let forum = "general"; // 当前广场：general / study / fun
-    const chatArea = document.getElementById("chatArea");
-    const input = document.getElementById("msgInput");
-    const sendBtn = document.getElementById("sendBtn");
-    const forumButtons = document.querySelectorAll(".forumBtn");
+const SESSION = getUserSession();
+const USER_NAME = SESSION ? SESSION.userName : "匿名用户";
+const USER_ID = SESSION ? SESSION.userId : "user_" + Math.random().toString(36).slice(2, 10);
 
-    const currentUserId = "user_" + Math.random().toString(36).slice(2, 10);
+/* ---------------- Firebase 初始化 ---------------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
+  authDomain: "laoda907-22511.firebaseapp.com",
+  databaseURL: "https://laoda907-22511-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "laoda907-22511",
+  storageBucket: "laoda907-22511.appspot.com",
+  messagingSenderId: "176173610464",
+  appId: "1:176173610464:web:3ff86202f9b05f24b36785"
+};
 
-    // 当前的 Firebase 消息监听引用（用于 off 防重）
-    let currentMessagesRef = null;
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-    /* ---------------- 文本清理（防止控制字符等） ---------------- */
-    function cleanText(text) {
-      if (typeof text !== "string") return "";
-      // 去掉奇怪的双向控制符，防止再次出现乱序
-      return text.replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, "");
-    }
+/* ---------------- 全局变量 ---------------- */
+let forum = "general";
+const chatArea = document.getElementById("chatArea");
+const input = document.getElementById("msgInput");
+const sendBtn = document.getElementById("sendBtn");
+const forumButtons = document.querySelectorAll(".forumBtn");
+const currentUserId = USER_ID;
+let currentMessagesRef = null;
 
-    /* ---------------- 显示消息 ---------------- */
-    function addMsg(text, isOwn) {
-      const div = document.createElement("div");
-      div.className = "msg" + (isOwn ? " me" : "");
-      div.textContent = text;
-      chatArea.appendChild(div);
-      chatArea.scrollTop = chatArea.scrollHeight;
-    }
+/* ---------------- 过滤控制符 ---------------- */
+function cleanText(text) {
+  return text.replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, "");
+}
 
-    /* ---------------- 加载并监听消息（核心） ---------------- */
-    function attachMessagesListener() {
-      // 清空当前 UI
-      chatArea.innerHTML = "";
+/* ==== 自动生成头像 ==== */
+function getAvatarLetter(name) {
+  return name ? name[0] : "用";
+}
 
-      // ❗先解除之前的监听，防止叠加
-      if (currentMessagesRef) {
-        currentMessagesRef.off();
-      }
+function getAvatarColor(name) {
+  const colors = ["#3498db","#9b59b6","#e67e22","#e91e63","#1abc9c","#f39c12"];
+  let sum = 0;
+  for (let i = 0; i < name.length; i++) sum += name.charCodeAt(i);
+  return colors[sum % colors.length];
+}
 
-      // 新的消息路径
-      const ref = db.ref("forums/" + forum + "/messages");
-      currentMessagesRef = ref;
+/* ==== 显示消息（含头像+光圈） ==== */
+function addMsg(msg) {
+  const isOwn = msg.userId === currentUserId;
 
-      // 只监听最近 200 条
-      ref.limitToLast(200).on("child_added", function (snapshot) {
-        const msg = snapshot.val() || {};
-        const text = cleanText(msg.text || "");
-        const isOwn = msg.userId === currentUserId;
-        addMsg(text, isOwn);
-      });
-    }
+  const wrapper = document.createElement("div");
+  wrapper.className = "msgWrapper" + (isOwn ? " me" : "");
 
-    /* ---------------- 发送消息 ---------------- */
-    function sendMessage() {
-      let raw = input.value;
-      let text = cleanText(raw.trim());
-      if (!text) return;
+  const avatarWrapper = document.createElement("div");
+  avatarWrapper.className = "avatarWrapper";
 
-      // ➜ 只写入数据库，不再手动 addMsg，避免重复
-      const ref = db.ref("forums/" + forum + "/messages");
-      ref.push({
-        userId: currentUserId,
-        text: text,
-        timestamp: Date.now()
-      });
+  const avatar = document.createElement("div");
+  avatar.className = "avatar";
+  avatar.style.background = getAvatarColor(msg.userName);
+  avatar.textContent = getAvatarLetter(msg.userName);
 
-      input.value = "";
-      input.focus();
-    }
+  avatarWrapper.appendChild(avatar);
 
-    /* ---------------- 事件绑定：发送 ---------------- */
-    sendBtn.addEventListener("click", function () {
-      sendMessage();
+  const bubble = document.createElement("div");
+  bubble.className = "msgBubble";
+
+  const nameTag = document.createElement("div");
+  nameTag.className = "msgName";
+  nameTag.textContent = msg.userName;
+
+  const textTag = document.createElement("div");
+  textTag.textContent = msg.text;
+
+  bubble.appendChild(nameTag);
+  bubble.appendChild(textTag);
+
+  if (isOwn) {
+    wrapper.appendChild(bubble);
+    wrapper.appendChild(avatarWrapper);
+  } else {
+    wrapper.appendChild(avatarWrapper);
+    wrapper.appendChild(bubble);
+  }
+
+  chatArea.appendChild(wrapper);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+/* ---------------- 智能过滤系统（不误伤单字） ---------------- */
+const SMART_BAD_WORD_PATTERNS = [
+  /操你妈|草你妈|艹你妈|我操你妈/gi,
+  /傻逼|沙比|煞笔|傻屌|傻叼/gi,
+  /妈的|他妈的/gi,
+  /死妈|你妈死了/gi,
+  /杂种|贱人|婊子/gi,
+  /傻[\s\-\*_]+逼/gi,
+  /\bsha[\s\.\-\*_]*bi\b/gi,
+  /\bsb\b/gi,
+  /\bs[\s\.\-\*_]*b\b/gi,
+  /\bnm[\s\.\-\*_]*sl\b/gi,
+  /\bnmsl\b/gi
+];
+
+function smartFilter(text) {
+  SMART_BAD_WORD_PATTERNS.forEach(pattern => {
+    text = text.replace(pattern, m => "*".repeat(m.length));
+  });
+  return text;
+}
+
+/* ---------------- 监听消息 ---------------- */
+function attachMessagesListener() {
+  chatArea.innerHTML = "";
+
+  if (currentMessagesRef) currentMessagesRef.off();
+
+  const ref = db.ref("forums/" + forum + "/messages");
+  currentMessagesRef = ref;
+
+  ref.limitToLast(200).on("child_added", snapshot => {
+    const msg = snapshot.val();
+    if (!msg) return;
+
+    addMsg({
+      userId: msg.userId,
+      userName: msg.userName || "用户",
+      text: cleanText(msg.text)
     });
+  });
+}
 
-    input.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-      }
-    });
+/* ---------------- 发送消息 ---------------- */
+function sendMessage() {
+  let raw = input.value;
+  let text = cleanText(raw.trim());
+  if (!text) return;
 
-    /* ---------------- 事件绑定：广场切换 ---------------- */
-    forumButtons.forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        forumButtons.forEach(function (b) {
-          b.classList.remove("active");
-        });
-        btn.classList.add("active");
+  text = smartFilter(text);
 
-        forum = btn.getAttribute("data-f");
-        attachMessagesListener();
-      });
-    });
+  const ref = db.ref("forums/" + forum + "/messages");
+  ref.push({
+    userId: currentUserId,
+    userName: USER_NAME,
+    text: text,
+    timestamp: Date.now()
+  });
 
-    /* ---------------- 背景音乐控制 ---------------- */
-    const bgmPlayer = document.getElementById("bgmPlayer");
-    const bgmSelect = document.getElementById("bgmSelect");
+  input.value = "";
+  input.focus();
+}
 
-    bgmSelect.addEventListener("change", function () {
-      const url = bgmSelect.value;
-      if (!url || url === "none") {
-        bgmPlayer.pause();
-        bgmPlayer.removeAttribute("src");
-      } else {
-        bgmPlayer.src = url;
-        bgmPlayer.volume = 0.5;
-        bgmPlayer.play().catch(function (e) {
-          console.log("背景音乐播放失败（可能是浏览器限制自动播放）:", e);
-        });
-      }
-    });
+sendBtn.addEventListener("click", sendMessage);
 
-    /* ---------------- 初始化 ---------------- */
+/* ---------------- 切换广场 ---------------- */
+forumButtons.forEach(btn => {
+  btn.onclick = () => {
+    forumButtons.forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    forum = btn.getAttribute("data-f");
     attachMessagesListener();
-  </script>
+  };
+});
+
+attachMessagesListener();
+
+/* ---------------- 背景音乐 ---------------- */
+const bgmPlayer = document.getElementById("bgmPlayer");
+const bgmSelect = document.getElementById("bgmSelect");
+
+bgmSelect.onchange = () => {
+  if (bgmSelect.value === "none") {
+    bgmPlayer.pause();
+  } else {
+    bgmPlayer.src = bgmSelect.value;
+    bgmPlayer.play();
+  }
+};
+
+/* ---------------- ❄ 下雪系统 ---------------- */
+let snowInterval = null;
+let snowEnabled = false;
+
+document.getElementById("snowToggle").onclick = function () {
+  snowEnabled = !snowEnabled;
+
+  if (snowEnabled) {
+    this.textContent = "❄ 关闭下雪";
+    startSnow();
+  } else {
+    this.textContent = "❄ 下雪";
+    stopSnow();
+  }
+};
+
+function createSnowflake() {
+  const snow = document.createElement("div");
+  snow.className = "snowflake";
+  snow.textContent = "❄";
+
+  const size = Math.random() * 10 + 8;
+  snow.style.fontSize = size + "px";
+
+  snow.style.left = Math.random() * 100 + "vw";
+
+  const duration = Math.random() * 7 + 8;
+  snow.style.animationDuration = duration + "s";
+
+  document.body.appendChild(snow);
+
+  setTimeout(() => snow.remove(), duration * 1000);
+}
+
+function startSnow() {
+  if (snowInterval) return;
+  snowInterval = setInterval(createSnowflake, 200);
+}
+
+function stopSnow() {
+  clearInterval(snowInterval);
+  snowInterval = null;
+}
+</script>
+
 </body>
 </html>
