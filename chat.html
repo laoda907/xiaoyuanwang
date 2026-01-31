@@ -418,6 +418,11 @@ async function initChat() {
         const input = document.getElementById('messageInput');
         input.disabled = false;
         
+        // 【规则1 — 输入框实时清除 Unicode 控制符】
+        document.getElementById("messageInput").addEventListener("input", function() {
+            this.value = this.value.replace(/[\u202A-\u202E\u2066-\u2069]/g, '');
+        });
+        
         // 延迟聚焦，确保布局稳定
         setTimeout(() => {
             input.focus();
@@ -528,8 +533,9 @@ function addMessageToUI(message, messageId) {
         minute: '2-digit' 
     }) : '刚刚';
     
-    // 直接使用原始文本，不做任何编码/解码处理
-    const messageText = message.text || '';
+    // 【规则3 — 在渲染消息到 UI 时也要清理一次】
+    let messageText = message.text || '';
+    messageText = messageText.replace(/[\u202A-\u202E\u2066-\u2069]/g, '');
     
     // 🔧 修复2：固定渲染方向，防止浏览器自动调换文字顺序
     messageEl.innerHTML = `
@@ -562,7 +568,7 @@ async function sendMessage() {
     const sendButton = document.getElementById('sendButton');
     let text = input.value.trim();
     
-    // 🔧 修复1：清理 Unicode 双向控制符，防止中文顺序被打乱
+    // 【规则2 — 在发送消息前再清理一次】
     text = text.replace(/[\u202A-\u202E\u2066-\u2069]/g, '');
     
     if (!text) {
@@ -742,4 +748,4 @@ function logout() {
 }
     </script>
 </body>
-    </html>
+</html>
