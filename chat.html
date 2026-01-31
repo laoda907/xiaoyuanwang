@@ -79,6 +79,19 @@
 <body>
   <header>🔥 全新升级聊天室</header>
 
+  <!-- 背景音乐选择 -->
+  <div style="padding:10px 20px; background:rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:10px;">
+    <label style="font-size:14px;">背景音乐：</label>
+    <select id="bgmSelect" style="padding:6px 10px; border-radius:5px; background:#16213e; color:#fff; border:none;">
+      <option value="none">关闭</option>
+      <option value="https://music.163.com/song/media/outer/url?id=22707000.mp3">穿越时空的思念（钢琴）</option>
+      <option value="https://music.163.com/song/media/outer/url?id=28907016.mp3">穿越时空的思念（原声）</option>
+      <option value="https://music.163.com/song/media/outer/url?id=1387202414.mp3">穿越时空的思念（治愈版）</option>
+    </select>
+  </div>
+
+  <audio id="bgmPlayer" loop></audio>
+
   <div id="chatArea"></div>
 
   <div id="inputBar">
@@ -118,6 +131,21 @@
       // TODO: 在这里集成 Firebase 或服务器发送逻辑
     }
   
+    // ===== 背景音乐控制 =====
+    const bgmPlayer = document.getElementById("bgmPlayer");
+    const bgmSelect = document.getElementById("bgmSelect");
+
+    bgmSelect.onchange = () => {
+      const url = bgmSelect.value;
+      if (url === "none") {
+        bgmPlayer.pause();
+      } else {
+        bgmPlayer.src = url;
+        bgmPlayer.volume = 0.5;
+        bgmPlayer.play();
+      }
+    };
+
     // ===== Firebase 集成 =====
     const firebaseConfig = {
       apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
