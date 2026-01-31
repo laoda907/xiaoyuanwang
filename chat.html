@@ -313,6 +313,12 @@ function safeAtob(str) {
     }
 }
 
+// ========= 清理 Unicode 双向控制符 =========
+function cleanText(text) {
+    if (typeof text !== 'string') return text;
+    return text.replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, '');
+}
+
 // ========= 安全IP编码 =========
 function encodeIPForFirebase(ip) {
     return ip.replace(/\./g, "_");
@@ -423,7 +429,10 @@ async function initChat() {
         
         // 【规则1 — 输入框实时清除 Unicode 控制符】
         document.getElementById("messageInput").addEventListener("input", function() {
-            this.value = this.value.replace(/[\u202A-\u202E\u2066-\u2069]/g, '');
+            const start = this.selectionStart;
+            const end = this.selectionEnd;
+            this.value = cleanText(this.value);
+            this.setSelectionRange(start, end);
         });
         
         // 延迟聚焦，确保布局稳定
@@ -538,7 +547,7 @@ function addMessageToUI(message, messageId) {
     
     // 【规则3 — 在渲染消息到 UI 时也要清理一次】
     let messageText = message.text || '';
-    messageText = messageText.replace(/[\u202A-\u202E\u2066-\u2069]/g, '');
+    messageText = cleanText(messageText);
     
     // 🔧 修复2：固定渲染方向，防止浏览器自动调换文字顺序
     messageEl.innerHTML = `
@@ -572,7 +581,7 @@ async function sendMessage() {
     let text = input.value.trim();
     
     // 【规则2 — 在发送消息前再清理一次】
-    text = text.replace(/[\u202A-\u202E\u2066-\u2069]/g, '');
+    text = cleanText(text);
     
     if (!text) {
         alert('请输入消息内容');
