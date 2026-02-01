@@ -5,9 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>全新升级聊天室</title>
 
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-database.js"></script>
+<!-- Supabase SDK -->
+<script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+  window.supabase = createClient(
+    "https://akqrebzfodejodgrtzyc.supabase.co",
+    "sb_publishable_sCIqqs5zvkGT8ITvQNxQOQ_p2e2j5to"
+  );
+</script>
 
 <style>
 /* ======== 全局 UI ======== */
@@ -268,19 +274,6 @@ const SESSION = getUserSession();
 const USER_NAME = SESSION ? SESSION.userName : "匿名用户";
 const USER_ID = SESSION ? SESSION.userId : ("user_"+Math.random().toString(36).slice(2,10));
 
-/* ========= Firebase ========= */
-const firebaseConfig = {
-  apiKey:"AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
-  authDomain:"laoda907-22511.firebaseapp.com",
-  databaseURL:"https://laoda907-22511-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId:"laoda907-22511",
-  storageBucket:"laoda907-22511.appspot.com",
-  messagingSenderId:"176173610464",
-  appId:"1:176173610464:web:3ff86202f9b05f24b36785"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
 /* ========= DOM ========= */
 let forum = "general";
 const chatArea = document.getElementById("chatArea");
@@ -339,12 +332,12 @@ function addMsg(msg){
 
 /* ========== 敏感词过滤 ========== */
 const SMART_BAD = [
-  /操你妈|草你妈|艹你妈|我操你妈/gi,
-  /傻逼|沙比|煞笔|傻屌|傻叼/gi,
-  /妈的|他妈的/gi,
-  /死妈|你妈死了/gi,
-  /杂种|贱人|婊子/gi,
-  /傻[\s\-\*_]+逼/gi,
+  /|||/gi,
+  /|||/gi,
+  /|/gi,
+  /|/gi,
+  /||/gi,
+  /[\s\-\*_]+/gi,
   /\bsha[\s\.\-\*_]*bi\b/gi,
   /\bsb\b/gi,
   /\bs[\s\.\-\*_]*b\b/gi,
@@ -358,48 +351,95 @@ function smartFilter(t){
   return t;
 }
 
-/* ========== 加载消息 ========== */
-let msgRef = null;
-function loadForum(){
-  chatArea.innerHTML="";
-  if(msgRef) msgRef.off();
+/* ========== Supabase 消息处理 ========== */
+let messageChannel = null;
 
-  msgRef = db.ref("forums/"+forum+"/messages");
-  msgRef.limitToLast(200).on("child_added",snap=>{
-    const m = snap.val();
+// 加载历史消息
+async function loadForum() {
+  chatArea.innerHTML = "";
+  
+  if (messageChannel) {
+    supabase.removeChannel(messageChannel);
+    messageChannel = null;
+  }
+
+  // 加载历史消息
+  let { data, error } = await supabase
+    .from("messages")
+    .select("*")
+    .eq("forum", forum)
+    .order("created_at", { ascending: true })
+    .limit(200);
+
+  if (error) {
+    console.error("加载消息失败:", error);
+    return;
+  }
+
+  data.forEach(m => {
     addMsg({
-      userId:m.userId,
-      userName:m.userName,
-      text:cleanText(m.text)
+      userId: m.user_id,
+      userName: m.user_name,
+      text: cleanText(m.text)
     });
   });
+
+  // 订阅实时消息
+  messageChannel = supabase
+    .channel(`realtime-messages-${forum}`)
+    .on(
+      "postgres_changes",
+      { 
+        event: "INSERT", 
+        schema: "public", 
+        table: "messages",
+        filter: `forum=eq.${forum}`
+      },
+      payload => {
+        addMsg({
+          userId: payload.new.user_id,
+          userName: payload.new.user_name,
+          text: cleanText(payload.new.text)
+        });
+      }
+    )
+    .subscribe();
 }
 
-/* ========== 发送 ========== */
+/* ========== 发送消息 ========== */
 sendBtn.onclick = sendMessage;
-function sendMessage(){
+
+async function sendMessage() {
   let t = cleanText(input.value.trim());
   if(!t) return;
 
   t = smartFilter(t);
 
-  db.ref("forums/"+forum+"/messages").push({
-    userId:USER_ID,
-    userName:USER_NAME,
-    text:t,
-    timestamp:Date.now()
-  });
+  const { error } = await supabase
+    .from("messages")
+    .insert([{
+      user_id: USER_ID,
+      user_name: USER_NAME,
+      text: t,
+      forum: forum,
+      created_at: new Date().toISOString()
+    }]);
 
-  input.value="";
+  if (error) {
+    console.error("发送失败:", error);
+    return;
+  }
+
+  input.value = "";
 }
 
 /* ========== 切换广场 ========== */
 document.querySelectorAll(".forumBtn").forEach(btn=>{
-  btn.onclick = ()=>{
+  btn.onclick = async ()=>{
     document.querySelectorAll(".forumBtn").forEach(b=>b.classList.remove("active"));
     btn.classList.add("active");
     forum = btn.getAttribute("data-f");
-    updatePresence();
+    await updatePresence();
     loadForum();
   };
 });
@@ -457,27 +497,74 @@ function stopSnow(){
   snowTimer=null;
 }
 
-/* ========== 在线人数（方案B + 显示方式A1） ========== */
-let presenceRef = null;
+/* ========== 在线人数（Supabase 实现） ========== */
+let statusChannel = null;
 
-function updatePresence(){
-  if(presenceRef) presenceRef.remove();
+// 上线
+async function updatePresence() {
+  // 清理旧的在线状态
+  await supabase.from("status").delete().eq("user_id", USER_ID);
+  
+  // 设置新的在线状态
+  const { error } = await supabase.from("status").insert([{
+    user_id: USER_ID,
+    user_name: USER_NAME,
+    forum: forum,
+    online: true,
+    last_seen: new Date().toISOString()
+  }]);
 
-  const userPath = "presence/"+forum+"/"+USER_ID;
-  presenceRef = db.ref(userPath);
+  if (error) {
+    console.error("更新在线状态失败:", error);
+  }
 
-  presenceRef.onDisconnect().remove();
-  presenceRef.set(true);
+  // 更新在线人数显示
+  updateOnlineCount();
 
-  db.ref("presence/"+forum).on("value",snap=>{
-    const count = snap.numChildren();
-    onlineCount.textContent = "👥 在线："+count+" 人";
-  });
+  // 订阅在线状态变化
+  if (statusChannel) {
+    supabase.removeChannel(statusChannel);
+  }
+
+  statusChannel = supabase
+    .channel("realtime-status")
+    .on(
+      "postgres_changes",
+      { 
+        event: "*", 
+        schema: "public", 
+        table: "status",
+        filter: `forum=eq.${forum}`
+      },
+      () => updateOnlineCount()
+    )
+    .subscribe();
 }
 
+// 更新在线人数显示
+async function updateOnlineCount() {
+  let { data, error } = await supabase
+    .from("status")
+    .select("*")
+    .eq("forum", forum)
+    .eq("online", true);
+
+  if (error) {
+    console.error("获取在线人数失败:", error);
+    return;
+  }
+
+  onlineCount.textContent = "👥 在线：" + data.length + " 人";
+}
+
+// 页面卸载时下线
+window.addEventListener("beforeunload", async () => {
+  await supabase.from("status").delete().eq("user_id", USER_ID);
+});
+
+// 初始设置
 updatePresence();
 </script>
-
 
 <script>
 // ===== 输入限制最多300字 =====
@@ -493,7 +580,6 @@ document.addEventListener("DOMContentLoaded", ()=>{
 });
 </script>
 
-
 <script>
 // ===== 字数实时显示 =====
 document.addEventListener("DOMContentLoaded", ()=>{
@@ -506,7 +592,6 @@ document.addEventListener("DOMContentLoaded", ()=>{
  }
 });
 </script>
-
 
 <script>
 // 自动折叠长消息
