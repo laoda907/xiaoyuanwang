@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>校园网 - 登录</title>
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-database.js"></script>
+    <!-- 移除 Firebase 引用 -->
+    <!-- 添加 Supabase 客户端 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
 <div class="auth-container">
@@ -56,11 +57,10 @@ function safeAtob(str) {
     }
 }
 
-/* ========= 安全IP编码（修复Firebase路径问题）========= */
-function encodeIPForFirebase(ip) {
-    // 将IP中的点替换为下划线，确保Firebase路径安全
-    return ip.replace(/\./g, "_");
-}
+/* ========= Supabase 客户端初始化 ========= */
+const supabaseUrl = "https://akqrebzfodejodgrtzyc.supabase.co";
+const supabaseKey = "sb_publishable_sCIqqs5zvkGT8ITvQNxQOQ_p2e2j5to";
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
 /* ========= 密码验证函数 ========= */
 function validatePassword(password) {
@@ -86,21 +86,6 @@ function validatePassword(password) {
     return { valid: true, message: '密码格式正确' };
 }
 
-/* ========= Firebase 配置 ========= */
-const firebaseConfig = {
-    apiKey: "AIzaSyD_KwO_EJxUfAQ3WF98IRN_fua6VXAWTe4",
-    authDomain: "laoda907-22511.firebaseapp.com",
-    databaseURL: "https://laoda907-22511-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "laoda907-22511",
-    storageBucket: "laoda907-22511.firebasestorage.app",
-    messagingSenderId: "176173610464",
-    appId: "1:176173610464:web:3ff86202f9b05f24b36785"
-};
-
-let database;
-firebase.initializeApp(firebaseConfig);
-database = firebase.database();
-
 /* ========= 获取用户IP ========= */
 async function getUserIP() {
     try {
@@ -121,57 +106,62 @@ function showMessage(text, type) {
     msg.className = 'message ' + type;
 }
 function showRegister() {
-    loginForm.style.display = 'none';
-    registerForm.style.display = 'block';
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('registerForm').style.display = 'block';
     showMessage('', '');
 }
 function showLogin() {
-    registerForm.style.display = 'none';
-    loginForm.style.display = 'block';
+    document.getElementById('registerForm').style.display = 'none';
+    document.getElementById('loginForm').style.display = 'block';
     showMessage('', '');
 }
 
-/* ========= 检查IP是否已注册 ========= */
-async function checkIPRegistered(userIP) {
-    try {
-        const safeIP = encodeIPForFirebase(userIP);
-        const ipRef = database.ref('ip_registrations/' + safeIP);
-        const snapshot = await ipRef.once('value');
-        return snapshot.exists();
-    } catch (error) {
-        console.error('检查IP失败:', error);
-        return false;
-    }
-}
-
 /* ========= 检查用户名是否存在 ========= */
-async function checkUsernameExists(name) {
+async function checkUsernameExists(username) {
     try {
-        // 查询所有用户，检查是否有相同的用户名
-        const usersRef = database.ref('users');
-        const snapshot = await usersRef.once('value');
-        
-        if (!snapshot.exists()) {
+        const { data, error } = await supabase
+            .from('users')
+            .select('id')
+            .eq('username', username)
+            .limit(1);
+            
+        if (error) {
+            console.error('检查用户名失败:', error);
             return false;
         }
         
-        const users = snapshot.val();
-        for (let userId in users) {
-            if (users[userId].name === name) {
-                return true;
-            }
-        }
-        return false;
+        return data && data.length > 0;
     } catch (error) {
         console.error('检查用户名失败:', error);
         return false;
     }
 }
 
+/* ========= 检查IP是否已注册 ========= */
+async function checkIPRegistered(ip) {
+    try {
+        const { data, error } = await supabase
+            .from('ip_registrations')
+            .select('id')
+            .eq('ip', ip)
+            .limit(1);
+            
+        if (error) {
+            console.error('检查IP失败:', error);
+            return false;
+        }
+        
+        return data && data.length > 0;
+    } catch (error) {
+        console.error('检查IP失败:', error);
+        return false;
+    }
+}
+
 /* ========= 注册 ========= */
 async function registerUser() {
-    const name = registerName.value.trim();
-    const password = registerPassword.value;
+    const name = document.getElementById('registerName').value.trim();
+    const password = document.getElementById('registerPassword').value;
 
     if (!name || !password) {
         alert('请输入用户名和密码');
@@ -187,8 +177,8 @@ async function registerUser() {
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.valid) {
         alert('密码错误：' + passwordValidation.message);
-        registerPassword.focus();
-        registerPassword.select();
+        document.getElementById('registerPassword').focus();
+        document.getElementById('registerPassword').select();
         return;
     }
 
@@ -217,35 +207,50 @@ async function registerUser() {
 
     showMessage('正在创建账号...', 'success');
 
+    // 生成用户ID
     const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-
+    
+    // 加密密码（保持与原有逻辑一致）
     const passwordHash = safeBtoa(password + '|' + Date.now()).split('').reverse().join('');
 
-    const sessionData = {
-        userId,
-        userName: name,
-        expiry: Date.now() + 7 * 24 * 60 * 60 * 1000,
-        userIP: userIP
-    };
-
     try {
-        // 存储用户信息
-        await database.ref('users/' + userId).set({
-            name,
-            passwordHash,
-            createdAt: new Date().toISOString(),
-            userIP: userIP,
-            lastLogin: new Date().toISOString()
-        });
+        // 写入用户数据到 users 表
+        const { error: userError } = await supabase
+            .from('users')
+            .insert({
+                id: userId,
+                username: name,
+                password_hash: passwordHash,
+                ip: userIP,
+                created_at: new Date().toISOString(),
+                last_login: new Date().toISOString()
+            });
+            
+        if (userError) {
+            throw new Error('用户注册失败: ' + userError.message);
+        }
         
-        // 记录IP注册信息（使用安全编码的IP）
-        const safeIP = encodeIPForFirebase(userIP);
-        await database.ref('ip_registrations/' + safeIP).set({
-            userId: userId,
-            registeredAt: new Date().toISOString(),
+        // 写入IP注册记录到 ip_registrations 表
+        const { error: ipError } = await supabase
+            .from('ip_registrations')
+            .insert({
+                ip: userIP,
+                username: name,
+                created_at: new Date().toISOString()
+            });
+            
+        if (ipError) {
+            console.error('IP记录失败:', ipError);
+            // 继续执行，不中断注册流程
+        }
+
+        // 创建本地session
+        const sessionData = {
+            userId,
             userName: name,
-            originalIP: userIP  // 保存原始IP以便查看
-        });
+            expiry: Date.now() + 7 * 24 * 60 * 60 * 1000,
+            userIP: userIP
+        };
 
         localStorage.setItem('xiaoyuan_session', safeBtoa(JSON.stringify(sessionData)));
 
@@ -261,8 +266,8 @@ async function registerUser() {
 
 /* ========= 登录 ========= */
 async function loginUser() {
-    const name = loginName.value.trim();
-    const password = loginPassword.value;
+    const name = document.getElementById('loginName').value.trim();
+    const password = document.getElementById('loginPassword').value;
 
     if (!name || !password) {
         alert('请输入用户名和密码');
@@ -271,56 +276,61 @@ async function loginUser() {
 
     showMessage('正在登录...', 'success');
 
-    // 通过查询找到用户ID
-    let userId = null;
-    let userData = null;
-    
-    const usersRef = database.ref('users');
-    const snapshot = await usersRef.once('value');
-    
-    if (snapshot.exists()) {
-        const users = snapshot.val();
-        for (let id in users) {
-            if (users[id].name === name) {
-                userId = id;
-                userData = users[id];
-                break;
-            }
-        }
-    }
-    
-    if (!userId) {
-        alert('用户不存在');
-        return;
-    }
-
-    // 验证密码
-    const decoded = safeAtob(userData.passwordHash.split('').reverse().join(''));
-    if (!decoded || !decoded.startsWith(password)) {
-        alert('密码错误');
-        return;
-    }
-
-    const sessionData = {
-        userId,
-        userName: name,
-        expiry: Date.now() + 7 * 24 * 60 * 60 * 1000,
-        userIP: userData.userIP || 'unknown'
-    };
-
-    localStorage.setItem('xiaoyuan_session', safeBtoa(JSON.stringify(sessionData)));
-
-    // 更新最后登录时间
     try {
-        await database.ref('users/' + userId).update({
-            lastLogin: new Date().toISOString()
-        });
-    } catch (error) {
-        console.error('更新登录时间失败:', error);
-    }
+        // 查询用户信息
+        const { data, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('username', name)
+            .limit(1);
+            
+        if (error) {
+            throw new Error('查询用户失败: ' + error.message);
+        }
+        
+        if (!data || data.length === 0) {
+            alert('用户不存在');
+            return;
+        }
+        
+        const userData = data[0];
+        
+        // 验证密码（保持原有加密方式）
+        const decoded = safeAtob(userData.password_hash.split('').reverse().join(''));
+        if (!decoded || !decoded.startsWith(password)) {
+            alert('密码错误');
+            return;
+        }
 
-    showMessage('登录成功，跳转中...', 'success');
-    setTimeout(() => location.href = 'main.html', 800);
+        // 创建本地session
+        const sessionData = {
+            userId: userData.id,
+            userName: name,
+            expiry: Date.now() + 7 * 24 * 60 * 60 * 1000,
+            userIP: userData.ip || 'unknown'
+        };
+
+        localStorage.setItem('xiaoyuan_session', safeBtoa(JSON.stringify(sessionData)));
+
+        // 更新最后登录时间
+        try {
+            await supabase
+                .from('users')
+                .update({ last_login: new Date().toISOString() })
+                .eq('id', userData.id);
+        } catch (updateError) {
+            console.error('更新登录时间失败:', updateError);
+            // 不中断登录流程
+        }
+
+        showMessage('登录成功，跳转中...', 'success');
+        setTimeout(() => location.href = 'main.html', 800);
+        
+    } catch (error) {
+        console.error('登录失败:', error);
+        alert('登录失败: ' + error.message);
+        showMessage('', '');
+    }
 }
 </script>
 </body>
