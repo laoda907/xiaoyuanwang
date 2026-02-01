@@ -351,6 +351,20 @@ function smartFilter(t){
   return t;
 }
 
+/* ========== 封禁检查 ========== */
+async function checkBan() {
+  let { data } = await supabase
+    .from("bans")
+    .select("*")
+    .eq("user_id", USER_ID);
+
+  if (data && data.length > 0) {
+    alert("你已被封禁，无法进入聊天室");
+    history.back();
+    throw new Error("User banned");
+  }
+}
+
 /* ========== Supabase 消息处理 ========== */
 let messageChannel = null;
 
@@ -368,7 +382,7 @@ async function loadForum() {
     .from("messages")
     .select("*")
     .eq("forum", forum)
-    .order("created_at", { ascending: true })
+    .order("id", { ascending: true })
     .limit(200);
 
   if (error) {
@@ -444,8 +458,6 @@ document.querySelectorAll(".forumBtn").forEach(btn=>{
   };
 });
 
-loadForum();
-
 /* ========== 背景音乐 ========== */
 const bgmPlayer = document.getElementById("bgmPlayer");
 document.getElementById("bgmSelect").onchange = ()=>{
@@ -502,17 +514,19 @@ let statusChannel = null;
 
 // 上线
 async function updatePresence() {
-  // 清理旧的在线状态
-  await supabase.from("status").delete().eq("user_id", USER_ID);
+  // 更新旧状态为离线，而不是删除
+  await supabase.from("status").update({
+    online: false
+  }).eq("user_id", USER_ID);
   
   // 设置新的在线状态
-  const { error } = await supabase.from("status").insert([{
+  const { error } = await supabase.from("status").upsert({
     user_id: USER_ID,
     user_name: USER_NAME,
     forum: forum,
     online: true,
     last_seen: new Date().toISOString()
-  }]);
+  });
 
   if (error) {
     console.error("更新在线状态失败:", error);
@@ -559,11 +573,23 @@ async function updateOnlineCount() {
 
 // 页面卸载时下线
 window.addEventListener("beforeunload", async () => {
-  await supabase.from("status").delete().eq("user_id", USER_ID);
+  await supabase.from("status").update({
+    online: false
+  }).eq("user_id", USER_ID);
 });
 
-// 初始设置
-updatePresence();
+// 初始化
+async function init() {
+  // 封禁检查
+  await checkBan();
+  
+  // 初始设置
+  await updatePresence();
+  loadForum();
+}
+
+// 启动
+init();
 </script>
 
 <script>
