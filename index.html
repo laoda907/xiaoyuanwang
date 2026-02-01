@@ -44,7 +44,7 @@ window.onerror = (msg, url, line) => {
 // 立即执行的函数，确保变量在按钮点击前就可用
 (function() {
     /* ========= Supabase 客户端初始化 ========= */
-    window.supabase = window.supabase || supabase.createClient(
+    window.supabase = supabase.createClient(
         "https://akqrebzfodejodgrtzyc.supabase.co",
         "sb_publishable_sCIqqs5zvkGT8ITvQNxQOQ_p2e2j5to"
     );
