@@ -193,7 +193,7 @@
                     return;
                 }
                 
-                // 显示用户名
+                // 显示用户名（直接从本地session读取，不查询数据库）
                 document.getElementById('userName').textContent = sessionData.userName || '用户';
                 
             } catch (error) {
