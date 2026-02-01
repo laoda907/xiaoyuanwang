@@ -1,76 +1,202 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>后台管理 - 登录</title>
-<script type="module">
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-
-const supabase = createClient(
-  "https://akqrebzfodejodgrtzyc.supabase.co",
-  "sb_publishable_sCIqqs5zvkGT8ITvQNxQOQ_p2e2j5to"
-);
-
-async function adminLogin(){
-  const key=document.getElementById("adminKey").value.trim();
-  const pwd=document.getElementById("adminPassword").value.trim();
-  const msg=document.getElementById("message");
-
-  if(!key||!pwd){
-    msg.textContent="请输入密钥和密码";
-    msg.style.display="block";
-    msg.className="message error";
-    return;
-  }
-
-  let { data, error } = await supabase
-    .from("admin")
-    .select("admin_key, admin_password")
-    .eq("id", 1)
-    .single();
-
-  if(error || !data){
-    msg.textContent="管理员配置不存在";
-    msg.style.display="block";
-    msg.className="message error";
-    return;
-  }
-
-  if(key===data.admin_key && pwd===data.admin_password){
-    localStorage.setItem("admin_session", btoa(JSON.stringify({
-      isAdmin:true,
-      loginTime:Date.now()
-    })));
-    msg.textContent="登录成功，正在进入后台...";
-    msg.className="message success";
-    msg.style.display="block";
-    setTimeout(()=>location.href="admin-panel.html",800);
-  }else{
-    msg.textContent="密钥或密码错误";
-    msg.style.display="block";
-    msg.className="message error";
-  }
-}
-window.adminLogin=adminLogin;
-</script>
-<style>
-body{background:#f4f4f4;font-family:sans-serif;padding:40px;}
-.admin-login{max-width:400px;margin:auto;background:#fff;padding:30px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.15);}
-input{width:100%;padding:12px;margin:8px 0;border-radius:6px;border:1px solid #ddd;}
-button{width:100%;padding:12px;background:#667eea;border:none;color:#fff;border-radius:6px;cursor:pointer;}
-.message{display:none;margin-top:10px;padding:10px;border-radius:6px;font-size:14px;}
-.error{background:#ffe5e5;color:#b91c1c;}
-.success{background:#e0f2fe;color:#075985;}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校园网 - 后台管理</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .admin-login {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 40px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        
+        .admin-login h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+        
+        .form-container {
+            text-align: left;
+        }
+        
+        .form-container h2 {
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        
+        .form-container input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 12px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        .btn-login {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 15px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .btn-login:hover {
+            opacity: 0.95;
+        }
+        
+        .tips {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .message {
+            margin-top: 15px;
+            font-size: 13px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            display: none;
+        }
+        
+        .message.error {
+            background: #ffe5e5;
+            color: #b91c1c;
+        }
+        
+        .message.success {
+            background: #e0f2fe;
+            color: #075985;
+        }
+        
+        code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
 </head>
 <body>
-<div class="admin-login">
-<h2>管理员登录</h2>
-<input id="adminKey" placeholder="管理员密钥">
-<input id="adminPassword" type="password" placeholder="管理员密码">
-<button onclick="adminLogin()">登录后台</button>
-<div id="message" class="message"></div>
-</div>
+    <div class="admin-login">
+        <h1>🔐 后台管理</h1>
+        <p class="subtitle">校园网聊天平台管理系统</p>
+        
+        <div class="form-container">
+            <h2>管理员登录</h2>
+            <input type="text" id="adminKey" placeholder="管理员密钥">
+            <input type="password" id="adminPassword" placeholder="管理员密码">
+            <button class="btn-login" onclick="adminLogin()">登录后台</button>
+            
+            <div id="message" class="message"></div>
+            
+            <div class="tips">
+                <div>⚠️ 安全提示：</div>
+                <div>1. 管理员账号不再写死在前端代码中。</div>
+                <div>2. 请在 Supabase 的 admin 表中设置密钥和密码。</div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+        const supabase = createClient(
+            "https://akqrebzfodejodgrtzyc.supabase.co",
+            "sb_publishable_sCIqqs5zvkGT8ITvQNxQOQ_p2e2j5to"
+        );
+
+        window.onerror = function(msg, url, line) {
+            alert("JS错误:\n" + msg + "\n行号: " + line);
+        };
+
+        // 显示消息
+        function showMessage(text, type) {
+            const msgDiv = document.getElementById('message');
+            msgDiv.textContent = text;
+            msgDiv.className = 'message ' + type;
+            msgDiv.style.display = 'block';
+        }
+
+        // 管理员登录
+        async function adminLogin() {
+            const adminKey = document.getElementById('adminKey').value.trim();
+            const adminPassword = document.getElementById('adminPassword').value;
+            
+            if (!adminKey || !adminPassword) {
+                showMessage('请输入密钥和密码', 'error');
+                return;
+            }
+            
+            try {
+                // 检查管理员配置
+                let { data, error } = await supabase
+                    .from("admin")
+                    .select("admin_key, admin_password")
+                    .eq("id", 1)
+                    .single();
+
+                if (error || !data) {
+                    showMessage("管理员配置不存在", "error");
+                    console.warn('请在 Supabase 的 admin 表中创建配置');
+                    return;
+                }
+                
+                // 验证账号和密码
+                if (adminKey === data.admin_key && adminPassword === data.admin_password) {
+                    // 生成管理员会话（只保存在本地浏览器）
+                    const sessionToken = btoa('admin|' + Date.now() + '|' + Math.random().toString(36));
+                    const sessionData = {
+                        isAdmin: true,
+                        token: sessionToken,
+                        loginTime: new Date().toISOString(),
+                        expiry: Date.now() + 2 * 60 * 60 * 1000 // 2小时有效期
+                    };
+                    
+                    // 本地保存加密会话
+                    localStorage.setItem('admin_session', btoa(JSON.stringify(sessionData)));
+                    
+                    showMessage('✅ 登录成功，正在进入后台...', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'admin-panel.html';
+                    }, 800);
+                } else {
+                    showMessage('❌ 密钥或密码错误', 'error');
+                }
+                
+            } catch (error) {
+                console.error('管理员登录失败:', error);
+                showMessage('登录失败，请重试', 'error');
+            }
+        }
+        
+        // 按Enter键登录
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                adminLogin();
+            }
+        });
+        
+        // 将 adminLogin 函数暴露给全局
+        window.adminLogin = adminLogin;
+    </script>
 </body>
 </html>
